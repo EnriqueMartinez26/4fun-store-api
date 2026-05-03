@@ -85,7 +85,10 @@ class CartService {
         // Regla de Negocio (RN-07): "Concurrencia y Límite de Stock".
         // Bloquea adicionar una mercadería si excede las existencias físicas en el inventario.
         if (product.stock < currentQty + quantity) {
-            throw new ErrorResponse(`Stock insuficiente. Disponible: ${product.stock}, en carrito: ${currentQty}`, 400);
+            const message = currentQty > 0 
+                ? `Ya tienes el máximo de unidades disponibles en tu carrito (${product.stock}).` 
+                : `Stock insuficiente. Solo quedan ${product.stock} unidades.`;
+            throw new ErrorResponse(message, 400);
         }
 
         // Diseño arquitectónico: Lazy Creation del contenedor cart.

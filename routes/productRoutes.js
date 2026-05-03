@@ -10,7 +10,8 @@ const {
   deleteProduct,
   deleteProducts,
   reorderProduct,
-  getSellerProducts
+  getSellerProducts,
+  getProductManagement
 } = require('../controllers/productController');
 const { protect, authorize } = require('../middlewares/auth');
 const verifyProductOwnership = require('../middlewares/verifyProductOwnership');
@@ -36,11 +37,11 @@ router.get('/seller/me', protect, authorize('SELLER', 'ADMIN'), getSellerProduct
 /** @route GET /api/products/admin/:id - Vista administrativa de detalle (incluye inactivos). */
 router.get('/admin/:id', protect, authorize('ADMIN'), getProductAdmin);
 
+/** @route GET /api/products/:id/management - Vista de detalle para gestión (Solo Dueño o Admin). */
+router.get('/:id/management', protect, authorize('ADMIN', 'SELLER'), verifyProductOwnership, getProductManagement);
+
 /** @route GET /api/products/:id - Vista de detalle de artículo (Pública). */
 router.get('/:id', getProduct);
-
-/** @route GET /api/products/:id/management - Vista de detalle para gestión (Solo Dueño o Admin). */
-router.get('/:id/management', protect, authorize('ADMIN', 'SELLER'), verifyProductOwnership, getProduct);
 
 
 // ─── GESTIÓN DE INVENTARIO (ADMIN & SELLER) ───

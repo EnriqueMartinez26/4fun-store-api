@@ -69,9 +69,18 @@ exports.addKeys = async (req, res, next) => {
             where: { productId: productId, status: 'AVAILABLE' }
         });
         
+        const updateData = { stock: currentTotal };
+
+        // Autocorrección de Estado: Si el producto estaba marcado como agotado pero ahora tiene stock,
+        // lo devolvemos al circuito de venta activo automáticamente.
+        if (product.status === 'OUT_OF_STOCK' && currentTotal > 0) {
+            updateData.status = 'ACTIVE';
+            logger.info(`♻️ Producto ${product.id} reactivado automáticamente por carga de stock.`);
+        }
+        
         await prisma.product.update({
             where: { id: productId },
-            data: { stock: currentTotal }
+            data: updateData
         });
 
         logger.info(`🔑 ${newKeysToInsert.length} keys agregadas para ${product.name}`);

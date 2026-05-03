@@ -131,6 +131,19 @@ exports.getProductAdmin = async (req, res, next) => {
 };
 
 /**
+ * Detalle de gestión de producto.
+ * Utilizado por vendedores para editar sus propios productos (incluye inactivos/borradores).
+ */
+exports.getProductManagement = async (req, res, next) => {
+  try {
+    const product = await ProductService.getProductById(req.params.id, { includeInactive: true });
+    res.status(200).json({ success: true, data: product });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Crea la base de un nuevo bien con todo su árbol relacional precompilado
  * (Soporta Plataformas, Géneros e insersión M2M de Etiquetas de Sistema).
  */

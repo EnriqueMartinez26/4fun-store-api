@@ -170,7 +170,10 @@ class ProductService extends BaseService {
         const { search, platform, genre, minPrice, maxPrice, page = 1, limit = 10, sort, discounted, includeInactive, sellerId } = query;
 
         const includeInactiveFlag = includeInactive === true || includeInactive === 'true';
-        const where = includeInactiveFlag ? { NOT: { status: 'ARCHIVED' } } : { status: 'ACTIVE' };
+        // RN: En la tienda pública mostramos tanto activos como agotados para mantener la visibilidad del catálogo.
+        const where = includeInactiveFlag 
+            ? { NOT: { status: 'ARCHIVED' } } 
+            : { status: { in: ['ACTIVE', 'OUT_OF_STOCK'] } };
 
         // RN - Búsqueda: Sensible a múltiples campos (Match Parcial Insensible).
         if (search) {
