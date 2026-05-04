@@ -43,10 +43,19 @@ class MetadataService {
     }
 
     async getById(id) {
+        logger.debug(`Buscando ${this.singular} por ID/Slug: ${id}`);
         let doc = await this.model.findFirst({ where: { slug: id } });
-        if (!doc) doc = await this.model.findFirst({ where: { id } });
+        if (doc) logger.debug(`Encontrado por Slug: ${doc.slug}`);
         
-        if (!doc) throw new ErrorResponse(this.notFoundMsg || `${this.singular} no encontrado`, 404);
+        if (!doc) {
+            doc = await this.model.findFirst({ where: { id } });
+            if (doc) logger.debug(`Encontrado por UUID: ${doc.id}`);
+        }
+        
+        if (!doc) {
+            logger.warn(`${this.singular} no encontrado: ${id}`);
+            throw new ErrorResponse(this.notFoundMsg || `${this.singular} no encontrado`, 404);
+        }
         return this.toDTO(doc);
     }
 
@@ -75,6 +84,8 @@ class MetadataService {
         if (active !== undefined) updateData.isActive = active;
 
         let doc = await this.model.findFirst({ where: { slug: id } });
+        if (!doc) doc = await this.model.findFirst({ where: { id } });
+        
         if (!doc) throw new ErrorResponse(this.notFoundMsg || `${this.singular} no encontrado`, 404);
 
         // RN (Integridad Referencial Custom): Si cambiamos el Primary Slug identificador, nos aseguramos
