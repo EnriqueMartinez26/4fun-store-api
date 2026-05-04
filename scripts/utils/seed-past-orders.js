@@ -1,18 +1,18 @@
-const prisma = require('./lib/prisma');
+const prisma = require('../../lib/prisma');
 
 async function main() {
-    console.log("Iniciando inyección de ventas simuladas (últimos 30 días)...");
+    console.log("Iniciando inyeccion de ventas simuladas (ultimos 30 dias)...");
 
     // 1. Obtener datos base
     const users = await prisma.user.findMany({ take: 5, select: { id: true } });
     const products = await prisma.product.findMany({ take: 10, select: { id: true, price: true } });
 
     if (users.length === 0 || products.length === 0) {
-        console.error("No hay usuarios o productos en la BD para generar órdenes.");
+        console.error("No hay usuarios o productos en la BD para generar ordenes.");
         return;
     }
 
-    // 2. Generar órdenes aleatorias en los últimos 30 días
+    // 2. Generar ordenes aleatorias en los ultimos 30 dias
     const numOrders = 45; // Simular 45 compras
     let generated = 0;
 
@@ -22,7 +22,7 @@ async function main() {
         const qty = Math.floor(Math.random() * 3) + 1; // 1 a 3 unidades
         const totalPrice = Number(randomProduct.price) * qty;
 
-        // Fecha aleatoria en los últimos 30 días
+        // Fecha aleatoria en los ultimos 30 dias
         const date = new Date();
         date.setDate(date.getDate() - Math.floor(Math.random() * 30));
 
@@ -46,12 +46,12 @@ async function main() {
                 }
             }
         });
-        
+
         // En 3NF no actualizamos contadores manuales redundantes.
         generated++;
     }
 
-    console.log(`✅ Inyección completada: Se simularon ${generated} órdenes con éxito.`);
+    console.log(`Inyeccion completada: Se simularon ${generated} ordenes con exito.`);
 }
 
 main()

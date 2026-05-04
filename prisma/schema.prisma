@@ -148,6 +148,8 @@ model User {
   verificationTokenExp DateTime?
   resetPasswordToken   String?
   resetPasswordExp     DateTime?
+  loginAttempts        Int       @default(0)
+  lockUntil            DateTime?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 

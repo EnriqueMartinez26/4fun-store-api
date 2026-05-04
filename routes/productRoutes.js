@@ -15,6 +15,7 @@ const {
 } = require('../controllers/productController');
 const { protect, authorize } = require('../middlewares/auth');
 const verifyProductOwnership = require('../middlewares/verifyProductOwnership');
+const { upload } = require('../config/cloudinary');
 
 /**
  * Capa de Enrutamiento: Catálogo Maestro de Productos (Store)
@@ -47,13 +48,13 @@ router.get('/:id', getProduct);
 // ─── GESTIÓN DE INVENTARIO (ADMIN & SELLER) ───
 
 /** @route POST /api/products - Alta de nuevo producto (Asociado al usuario activo). */
-router.post('/', protect, authorize('ADMIN', 'SELLER'), createProduct);
+router.post('/', protect, authorize('ADMIN', 'SELLER'), upload.single('image'), createProduct);
 
 /** @route PUT /api/products/:id/reorder - Mutación de posición visual (Ranking Escaparate). */
 router.put('/:id/reorder', protect, authorize('ADMIN'), reorderProduct);
 
 /** @route PUT /api/products/:id - Edición integral de ficha de producto (con validación de propiedad). */
-router.put('/:id', protect, authorize('ADMIN', 'SELLER'), verifyProductOwnership, updateProduct);
+router.put('/:id', protect, authorize('ADMIN', 'SELLER'), verifyProductOwnership, upload.single('image'), updateProduct);
 
 /** @route DELETE /api/products/multi - Desactivación masiva de catálogo (validada en controlador). */
 router.delete('/multi', protect, authorize('ADMIN', 'SELLER'), deleteProducts);

@@ -75,43 +75,42 @@ class OrderService {
             });
         }
 
-        // RN (Gestión de Inventario Optimista): Reduce los saldos provisionalmente asumiendo 
-        // voluntad total de pago por parte del cliente.
-        for (const item of validatedItems) {
-            if (item.type !== 'DIGITAL') {
-                const updated = await prisma.product.updateMany({
-                    where: { id: item.id, stock: { gte: item.quantity } },
-                    data: { stock: { decrement: item.quantity } }
-                });
-                if (updated.count === 0) {
-                    // Compensatory Action (Sudo Rollback manual)
-                    for (const prev of validatedItems) {
-                        if (prev.id === item.id) break;
-                        await prisma.product.update({ where: { id: prev.id }, data: { stock: { increment: prev.quantity } } });
+        // RN (Regla de Atomicidad): Usamos $transaction para que la creación del pedido
+        // y la reserva de stock sean una sola operación indivisible.
+        const order = await prisma.$transaction(async (tx) => {
+            // 1. Reservar stock para productos físicos
+            for (const item of validatedItems) {
+                if (item.type !== 'DIGITAL') {
+                    const updated = await tx.product.updateMany({
+                        where: { id: item.id, stock: { gte: item.quantity } },
+                        data: { stock: { decrement: item.quantity } }
+                    });
+                    
+                    if (updated.count === 0) {
+                        throw new ErrorResponse(`Stock agotado para: ${item.title}.`, 409);
                     }
-                    throw new ErrorResponse(`Stock agotado para: ${item.title}.`, 409);
                 }
             }
-        }
 
-        // DML de Inserción Relacional Compleja
-        const order = await prisma.order.create({
-            data: {
-                userId: user.id || user._id?.toString() || user,
-                paymentMethod: paymentMethod || 'mercadopago',
-                shippingPrice: 0,
-                totalPrice: calculatedTotal,
-                status: 'PENDING',
-                isPaid: false,
-                shippingAddress: shippingAddress ? { create: shippingAddress } : undefined,
-                orderItems: {
-                    create: validatedItems.map(i => ({
-                        productId: i.id,
-                        quantity: i.quantity,
-                        unitPriceAtPurchase: i.unit_price // Snapshot histórico para contabilidad inmutable.
-                    }))
+            // 2. Crear la orden y sus items
+            return await tx.order.create({
+                data: {
+                    userId: user.id || user._id?.toString() || user,
+                    paymentMethod: paymentMethod || 'mercadopago',
+                    shippingPrice: 0,
+                    totalPrice: calculatedTotal,
+                    status: 'PENDING',
+                    isPaid: false,
+                    shippingAddress: shippingAddress ? { create: shippingAddress } : undefined,
+                    orderItems: {
+                        create: validatedItems.map(i => ({
+                            productId: i.id,
+                            quantity: i.quantity,
+                            unitPriceAtPurchase: i.unit_price
+                        }))
+                    }
                 }
-            }
+            });
         });
 
         logger.info(`Orden ${order.id} creada exitosamente (Pendiente de pago).`);

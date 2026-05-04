@@ -8,7 +8,7 @@ const {
   updateOrderStatus,
   updateOrderToPaid
 } = require('../controllers/orderController');
-const { protect, authorize } = require('../middlewares/auth');
+const { protect, authorize, ensureVerified } = require('../middlewares/auth');
 
 /**
  * Capa de Enrutamiento: Ciclo de Vida de Órdenes y Pagos (Orders)
@@ -20,7 +20,7 @@ const { protect, authorize } = require('../middlewares/auth');
 // ─── RUTAS DE USUARIO (PROTEGIDAS) ───
 
 /** @route POST /api/orders - Iniciación de compra y reserva de stock. */
-router.post('/', protect, createOrder);
+router.post('/', protect, ensureVerified, createOrder);
 
 /** @route GET /api/orders/my-orders - Historial de adquisiciones del usuario en sesión. */
 router.get('/my-orders', protect, getUserOrders);

@@ -104,3 +104,17 @@ exports.authorize = (...roles) => {
         next();
     };
 };
+
+/**
+ * Middleware para asegurar que el usuario tenga el email verificado (RN17).
+ * Se aplica a rutas críticas como la creación de pedidos o perfiles de vendedor.
+ */
+exports.ensureVerified = (req, res, next) => {
+    if (!req.user.isVerified) {
+        return res.status(403).json({
+            success: false,
+            message: 'Debes verificar tu email para realizar esta acción.'
+        });
+    }
+    next();
+};

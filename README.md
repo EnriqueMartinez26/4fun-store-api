@@ -7,9 +7,8 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Node.js-18+-339933?logo=node.js&logoColor=white" alt="Node.js">
-  <img src="https://img.shields.io/badge/Express-4.18-000000?logo=express&logoColor=white" alt="Express">
-  <img src="https://img.shields.io/badge/MongoDB-Atlas-47A248?logo=mongodb&logoColor=white" alt="MongoDB">
+  <img src="https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL">
+  <img src="https://img.shields.io/badge/Prisma-ORM-2D3748?logo=prisma&logoColor=white" alt="Prisma">
   <img src="https://img.shields.io/badge/JWT-Auth-000000?logo=jsonwebtokens&logoColor=white" alt="JWT">
   <img src="https://img.shields.io/badge/MercadoPago-Payments-00B1EA?logo=mercadopago&logoColor=white" alt="MercadoPago">
 </p>
@@ -57,7 +56,7 @@ Proyecto-Back/
 ├── config/          # Configuración de DB y CORS
 ├── controllers/     # Controladores de rutas (request/response)
 ├── middlewares/     # Auth JWT, validación, manejo de errores
-├── models/          # Esquemas Mongoose (MongoDB)
+├── prisma/          # Esquema Prisma (PostgreSQL)
 ├── routes/          # Definición de rutas Express
 ├── services/        # Lógica de negocio
 ├── utils/           # Logger (Winston), constantes, helpers
@@ -81,7 +80,7 @@ Request → Route → Middleware (Auth/Validation) → Controller → Service �
 |------------------|-------------------------------------------------------------------|
 | Runtime          | Node.js 18+                                                      |
 | Framework        | Express 4.18                                                     |
-| Base de Datos    | MongoDB Atlas (Mongoose 7.6)                                     |
+| Base de Datos    | PostgreSQL (Prisma ORM)                                          |
 | Autenticación    | JWT (jsonwebtoken) + bcryptjs                                    |
 | Pagos            | MercadoPago SDK v2                                               |
 | Email            | Nodemailer (SMTP Gmail)                                          |
@@ -100,7 +99,7 @@ Request → Route → Middleware (Auth/Validation) → Controller → Service �
 
 - Node.js ≥ 18
 - npm o yarn
-- Cuenta en [MongoDB Atlas](https://www.mongodb.com/atlas) (o instancia local)
+- Instancia de **PostgreSQL** local o en la nube (ej. Supabase/Render)
 - Credenciales de [MercadoPago](https://www.mercadopago.com.ar/developers)
 - Cuenta Gmail con [App Password](https://myaccount.google.com/apppasswords) para emails
 
@@ -138,7 +137,7 @@ FRONTEND_URL=http://localhost:9002
 BACKEND_URL=http://localhost:9003
 
 # BASE DE DATOS
-MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/4fun
+DATABASE_URL="postgresql://user:password@localhost:5432/4fun_db"
 
 # SEGURIDAD Y JWT
 JWT_SECRET=<clave-secreta-min-32-caracteres>
@@ -258,8 +257,6 @@ Base URL: `http://localhost:9003/api`
 
 ## 📊 Modelos de Datos
 
-| Modelo       | Descripción                                           |
-|--------------|-------------------------------------------------------|
 | `User`       | Usuarios con roles (user/admin), verificación email   |
 | `Product`    | Videojuegos con plataforma, género, precio, specs PC  |
 | `Cart`       | Carrito de compras vinculado a usuario                |
@@ -281,7 +278,7 @@ El backend implementa múltiples capas de seguridad:
 - **Helmet** — Headers HTTP seguros
 - **Rate Limiting** — Máx. 1000 requests/15min por IP en `/api`
 - **CORS** — Whitelist de orígenes (localhost + Vercel deploys)
-- **MongoDB Sanitize** — Prevención de inyección NoSQL
+- **Input Sanitization** — Prevención de inyecciones SQL vía Prisma
 - **HPP** — Protección contra contaminación de parámetros HTTP
 - **JWT en cookies** — Tokens seguros con `httpOnly` + `secure` en producción
 - **bcryptjs** — Hash de contraseñas
@@ -314,7 +311,7 @@ Tests implementados con **Jest** y **node-mocks-http**, ubicados en `tests/`.
 
 - Backend desplegado en **Render**
 - Frontend desplegado en **Vercel**
-- Base de datos en **MongoDB Atlas**
+- Base de datos en **PostgreSQL (Supabase/Render)**
 - Tunelización local con **ngrok** para webhooks de MercadoPago
 
 ---

@@ -9,6 +9,8 @@ const corsOptions = {
             'http://localhost:3000',
             'http://localhost:9002',
             'http://localhost:9003',
+            'http://127.0.0.1:9002',
+            'http://127.0.0.1:9003',
             'https://4funstore-vercel.vercel.app',
             process.env.FRONTEND_URL
         ].filter(Boolean);

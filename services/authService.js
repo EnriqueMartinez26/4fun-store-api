@@ -158,13 +158,44 @@ class AuthService {
         if (!email || !password) throw new ErrorResponse('Por favor ingrese email y contraseña', 400);
 
         const user = await prisma.user.findUnique({ where: { email } });
-        // Manejo de Error: Se expone mensaje ambiguo (401) intencionalmente contra ataques de enumeración (Information Disclosure).
+        
         if (!user) throw new ErrorResponse('Credenciales inválidas', 401);
 
-        const isMatch = await matchPassword(password, user.password);
-        if (!isMatch) throw new ErrorResponse('Credenciales inválidas', 401);
+        // RN36: Verificar si la cuenta está bloqueada
+        if (user.lockUntil && user.lockUntil > new Date()) {
+            const remainingMinutes = Math.ceil((user.lockUntil - new Date()) / 60000);
+            throw new ErrorResponse(`Cuenta bloqueada temporalmente. Intente de nuevo en ${remainingMinutes} minutos.`, 423);
+        }
 
-        // Mapeos adaptativos requeridos por el pipeline legacy hacia el controlador MVC.
+        const isMatch = await matchPassword(password, user.password);
+
+        if (!isMatch) {
+            // Incrementar intentos fallidos
+            const newAttempts = user.loginAttempts + 1;
+            const updateData = { loginAttempts: newAttempts };
+
+            // Bloquear si llega al límite (ej: 5 intentos)
+            if (newAttempts >= 5) {
+                updateData.lockUntil = new Date(Date.now() + 30 * 60 * 1000); // 30 minutos
+                updateData.loginAttempts = 0; // Opcional: resetear para el próximo ciclo
+            }
+
+            await prisma.user.update({
+                where: { id: user.id },
+                data: updateData
+            });
+
+            throw new ErrorResponse('Credenciales inválidas', 401);
+        }
+
+        // Login exitoso: Resetear contadores de seguridad
+        if (user.loginAttempts > 0 || user.lockUntil) {
+            await prisma.user.update({
+                where: { id: user.id },
+                data: { loginAttempts: 0, lockUntil: null }
+            });
+        }
+
         user._id = user.id;
         user.getSignedJwtToken = () => signToken(user.id);
         return user;
