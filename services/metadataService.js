@@ -77,7 +77,7 @@ class MetadataService {
     }
 
     async update(id, data) {
-        const { name, imageId, active, newId: newSlug } = data;
+        const { name, imageId, active } = data;
         const updateData = {};
         if (name !== undefined) updateData.name = name;
         if (imageId !== undefined) updateData.imageUrl = imageId;
@@ -88,24 +88,9 @@ class MetadataService {
         
         if (!doc) throw new ErrorResponse(this.notFoundMsg || `${this.singular} no encontrado`, 404);
 
-        // RN (Integridad Referencial Custom): Si cambiamos el Primary Slug identificador, nos aseguramos
-        // de no pisar uno previamente empleado por otra categoría.
-        if (newSlug && newSlug !== id) {
-            const existing = await this.model.findFirst({ where: { slug: newSlug } });
-            if (existing) throw new ErrorResponse(`El ID '${newSlug}' ya está en uso`, 400);
-            updateData.slug = newSlug;
-        }
 
         const updated = await this.model.update({ where: { id: doc.id }, data: updateData });
 
-        // RN Mantenibilidad Continua: Propaga automáticamente el FK cascade si el índice fue mutado por UI
-        if (newSlug && newSlug !== id && this.productField) {
-            const count = await prisma.product.updateMany({
-                where: { [this.productField]: doc.id },
-                data: { [this.productField]: updated.id }
-            });
-            logger.info(`Migrados ${count.count} productos de ${this.singular} '${id}' a '${newSlug}'`);
-        }
 
         return this.toDTO(updated);
     }
