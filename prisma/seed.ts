@@ -10,9 +10,20 @@ const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log('🧹 Limpiando la base de datos...');
+  await prisma.transaction.deleteMany();
+  await prisma.shippingAddress.deleteMany();
+  await prisma.payment.deleteMany();
+  await prisma.digitalKey.deleteMany();
+  await prisma.reviewHelpfulVote.deleteMany();
+  await prisma.review.deleteMany();
   await prisma.bundleItem.deleteMany();
+  await prisma.cartItem.deleteMany();
+  await prisma.wishlistItem.deleteMany();
+  await prisma.cart.deleteMany();
+  await prisma.wishlist.deleteMany();
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
+  await prisma.productRequirement.deleteMany();
   await prisma.product.deleteMany();
   await prisma.sellerProfile.deleteMany();
   await prisma.user.deleteMany();
