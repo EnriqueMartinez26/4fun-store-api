@@ -319,7 +319,8 @@ class ProductService extends BaseService {
         const firstProduct = await prisma.product.findFirst({ where: { status: 'ACTIVE' }, orderBy: { displayOrder: 'asc' } });
         const newOrder = firstProduct ? firstProduct.displayOrder - 1000 : 0;
 
-        const tipo = type === 'Physical' ? 'PHYSICAL' : 'DIGITAL';
+        // RN - Solo Digital: Todos los productos son digitales en esta plataforma.
+        const tipo = 'DIGITAL';
 
         // Normalización de Requisitos de Hardware para persistencia relación M2M/12 Muitos.
         const requirementsData = [];
@@ -401,7 +402,7 @@ class ProductService extends BaseService {
 
         if (data.releaseDate !== undefined) updateData.releaseDate = new Date(data.releaseDate);
         if (data.discountEndDate !== undefined) updateData.discountEndDate = data.discountEndDate ? new Date(data.discountEndDate) : null;
-        if (data.type !== undefined) updateData.type = data.type === 'Physical' ? 'PHYSICAL' : 'DIGITAL';
+        if (data.type !== undefined) updateData.type = 'DIGITAL';
 
         const effectiveType = updateData.type || existing.type;
 

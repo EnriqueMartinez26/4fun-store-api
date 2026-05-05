@@ -23,7 +23,7 @@ const DigitalProductStrategy  = require('./DigitalProductStrategy');
  * @type {Object.<string, import('./PricingStrategy')>}
  */
 const STRATEGY_MAP = {
-    'PHYSICAL': PhysicalProductStrategy,
+    'PHYSICAL': DigitalProductStrategy, // Fallback de seguridad: tratar físicos como digitales
     'DIGITAL':  DigitalProductStrategy,
 };
 

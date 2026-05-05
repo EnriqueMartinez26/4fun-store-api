@@ -28,7 +28,6 @@ enum Role {
 /// Tipo de producto (digital vs físico)
 enum ProductType {
   DIGITAL
-  PHYSICAL
 }
 
 /// Preset de requerimientos técnicos para software
@@ -207,7 +206,7 @@ model Product {
   name             String
   description      String
   price            Decimal     @db.Decimal(10, 2)
-  type             ProductType
+  type             ProductType @default(DIGITAL)
   releaseDate      DateTime
   developer        String
   imageUrl         String      @default("https://placehold.co/600x400?text=No+Image")
