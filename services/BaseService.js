@@ -22,7 +22,7 @@ class BaseService {
     constructor(modelName, options = {}) {
         const { entityLabel, hasActiveField = true } = options;
         
-        // Manejo de Excepciones: Bloquea intentos de usar BaseService globalmente en vez de heredar.
+        // Prevenir uso directo de clase base
         if (new.target === BaseService) {
             throw new Error('BaseService es una clase abstracta y no puede instanciarse directamente.');
         }
@@ -39,7 +39,7 @@ class BaseService {
         }
     }
 
-    // ── Métodos Template (sobrescribibles por hijos) ──────────────────────
+    // MÉTODOS TEMPLATE (sobrescribibles por hijos)
 
     /**
      * Transforma una entidad cruda DB (Prisma) a un DTO apto para la API.
@@ -81,7 +81,7 @@ class BaseService {
      */
     async validateBeforeUpdate(id, data) { }
 
-    // ── Operaciones CRUD delegadas por Controladores ─────────────────────
+    // OPERACIONES CRUD delegadas por Controladores
 
     /**
     * Devuelve colección de registros transformados a DTO.

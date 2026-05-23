@@ -57,15 +57,14 @@ class AuthService {
     async register({ name, email, password }) {
         const userExists = await prisma.user.findUnique({ where: { email } });
         
-        // RN-02: Garantía de Usuarios Únicos. Impide crear cuentas clonadas en el sistema.
-        // Manejo de Excepciones: Arroja 400 (Bad Request) que será atajado por ErrorHandler global.
+        // Validar unicidad: prevenir cuentas duplicadas
         if (userExists) throw new ErrorResponse('El usuario ya existe', 400);
 
-        // Seguridad: Generación de token probabilístico de 40 chars para el mail.
+        // Token de verificación para email (40 caracteres hex)
         const verificationToken = crypto.randomBytes(20).toString('hex');
         const hashedPwd = await hashPassword(password);
 
-        // RN-03: Cuentas nuevas nacen inactivas (isVerified: false).
+        // Nuevas cuentas inactivas hasta verificación de email
         const user = await prisma.user.create({
             data: {
                 name,
@@ -79,7 +78,7 @@ class AuthService {
 
         let emailSent = false;
         
-        // Promesa asíncrona de Mailing. No bloquea el alta del usuario si SMTP está caído.
+        // Enviar email sin bloquear el registro si falla SMTP
         const emailPromise = emailService.sendWelcomeEmail({ name, email, verificationToken })
             .then(result => {
                 emailSent = result.success;
@@ -91,8 +90,7 @@ class AuthService {
                 logger.error('Excepción al enviar email', { email, error: error.message });
             });
 
-        // RN de Resiliencia: Si el correo tarda más de 4s en enviarse, soltamos el requets 
-        // para no dejar al frontal en timeout.
+        // Timeout: máx 4s en envío de email para evitar bloqueo del cliente
         await Promise.race([emailPromise, new Promise(r => setTimeout(r, 4000))]);
         return { user: { ...user, _id: user.id }, emailSent };
     }
@@ -106,12 +104,11 @@ class AuthService {
         const user = await prisma.user.findFirst({
             where: {
                 verificationToken: token,
-                verificationTokenExp: { gt: new Date() } // Condición: Debe estar vigente hoy
+                verificationTokenExp: { gt: new Date() }
             }
         });
 
-        // RN: Previene resucitar tokens viejos, o ataques de repetición.
-        // Falla ruidosamente mandando un HTTP 400 al controlador.
+        // Prevenir reutilización de tokens expirados o inválidos
         if (!user) throw new ErrorResponse('Token de verificación inválido o expirado', 400);
 
         await prisma.user.update({

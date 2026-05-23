@@ -56,7 +56,7 @@ class WishlistService {
      * @returns {Promise<boolean>} Estado de la operación.
      */
     async toggleWishlist(userId, productId) {
-        // Manejo de Excepciones: Verifica la existencia de la cabecera de Wishlist para el usuario.
+        // Verificar lista de favoritos del usuario
         let wishlist = await prisma.wishlist.findUnique({
             where: { userId },
             include: { items: true }

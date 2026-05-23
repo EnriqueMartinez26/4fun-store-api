@@ -40,11 +40,10 @@ class EmailNotificationObserver extends OrderObserver {
      * @returns {Promise<void>}
      */
     async update(event, { order, digitalKeys, meta = {} }) {
-        // Guardia de Evento: Este observer solo reacciona a pagos confirmados.
+        // Solo procesar pagos confirmados
         if (event !== 'order:paid') return;
 
-        // RN (Condición de Entrega): Solo envía email si el flag de pago nuevo
-        // está activo y existen keys para entregar al comprador.
+        // Enviar keys solo si se confirma pago nuevo y existen claves
         const { shouldSendKeysEmail } = meta;
         const hasKeys = (digitalKeys?.length || 0) > 0;
 

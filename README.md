@@ -85,7 +85,7 @@ Request → Route → Middleware (Auth/Validation) → Controller → Service �
 | Pagos            | MercadoPago SDK v2                                               |
 | Email            | Nodemailer (SMTP Gmail)                                          |
 | Validación       | express-validator                                                |
-| Seguridad        | Helmet, express-rate-limit, express-mongo-sanitize, hpp, CORS    |
+| Seguridad        | Helmet, express-rate-limit, hpp, CORS                            |
 | Logging          | Winston                                                          |
 | Compresión       | compression                                                      |
 | Testing          | Jest + node-mocks-http                                           |

@@ -24,7 +24,7 @@ exports.getCart = async (req, res, next) => {
     const cartResponse = await CartService.getCart(req.user.id);
     res.json({ success: true, cart: cartResponse });
   } catch (error) {
-    // Manejo de Excepciones: Delegamos cualquier fallo del servicio (ej. base de datos 
+    // Delegar al middleware central en caso de fallo del servicio
     // caída u OOM) al errorHandler central, evitando que el servidor devuelva HTML crudo.
     next(error);
   }
@@ -50,7 +50,7 @@ exports.addToCart = async (req, res, next) => {
     
     res.json({ success: true, message: 'Agregado', cart: populatedCart });
   } catch (error) {
-    // Manejo de Excepciones: Si el servicio detecta falta de stock (RN-07 vulnerada),
+    // Servicio detecta falta de stock y lanza excepción controlada
     // arrojará un ErrorResponse personalizado que atrapamos aquí y enviamos al cliente.
     next(error);
   }

@@ -14,7 +14,7 @@ const jwt = require('jsonwebtoken');
 /**
  * Transforma y sanitiza en memoria la entidad Usuario hacia un DTO (Data Transfer Object).
  * Asegura la Mantenibilidad eliminando passwords u otros internals de la salida HTTP.
- * @param {Object} user - Entidad Prisma / Mongoose legacy
+ * @param {Object} user - Entidad Prisma
  * @returns {Object} Representación segura para enviar al FrontEnd.
  */
 const toUserDTO = (user) => ({
@@ -74,7 +74,7 @@ exports.register = async (req, res, next) => {
         const { user, emailSent } = await AuthService.register(req.body);
         sendTokenResponse(user, 201, res, emailSent);
     } catch (error) {
-        // Manejo de Excepciones: Cualquier fallo (mail caído, bd llena, validación fallida de RN)
+        // Delegar errores al middleware central (mail, BD, validaciones)
         // enruta de inmediato al errorHandler centralizado.
         next(error);
     }

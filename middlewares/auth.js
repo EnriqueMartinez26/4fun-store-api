@@ -80,7 +80,7 @@ exports.protect = async (req, res, next) => {
         req.user = user;
         next();
     } catch (error) {
-        // Manejo de Excepciones: Atrapa fallos en jwt.verify (ej: tokens expirados o adulterados)
+        // Capturar fallos de JWT (tokens expirados, inválidos, adulterados)
         logger.error(`[Auth Middleware] Error de verificación: ${error.message}`);
         return res.status(401).json({ success: false, message: 'No autorizado' });
     }

@@ -104,7 +104,7 @@ class UserService extends BaseService {
             throw new ErrorResponse('Rol inválido. Valores permitidos: BUYER, SELLER o ADMIN.', 400);
         }
         
-        // Manejo de Excepciones: Verifica existencia antes de intentar la mutación.
+        // Validar existencia antes de actualizar
         const existing = await this.model.findUnique({ 
             where: { id },
             include: { sellerProfile: true }

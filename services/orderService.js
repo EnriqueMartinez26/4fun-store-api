@@ -161,7 +161,12 @@ class OrderService {
     async getOrderById(orderId, userId, userRole) {
         const order = await prisma.order.findUnique({
             where: { id: orderId },
-            include: { user: { select: { id: true, name: true, email: true } }, orderItems: { include: { product: true } }, shippingAddress: true }
+            include: { 
+                user: { select: { id: true, name: true, email: true } }, 
+                orderItems: { include: { product: true } }, 
+                shippingAddress: true,
+                digitalKeys: { select: { id: true, key: true, productId: true } }
+            }
         });
         
         if (!order) throw new ErrorResponse('Orden no encontrada', 404);

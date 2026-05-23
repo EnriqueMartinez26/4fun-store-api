@@ -35,7 +35,7 @@ class OrderEventBus {
         this._observers = [];
     }
 
-    // ── Gestión del Canal de Suscripción ─────────────────────────────────
+    // GESTIÓN DEL CANAL DE SUSCRIPCIÓN
 
     /**
      * Suscribe un nuevo observer al bus de eventos.
@@ -45,7 +45,7 @@ class OrderEventBus {
      * @returns {OrderEventBus} Retorna `this` para permitir encadenamiento fluent.
      */
     subscribe(observer) {
-        // Manejo de Excepciones: Previene duplicados en la lista de observadores.
+        // Prevenir observers duplicados
         if (!this._observers.includes(observer)) {
             this._observers.push(observer);
             logger.info(`[OrderEventBus] Observer suscrito: ${observer.constructor.name}`);
@@ -67,7 +67,7 @@ class OrderEventBus {
         return this;
     }
 
-    // ── Notificación en Cascada ───────────────────────────────────────────
+    // NOTIFICACIÓN EN CASCADA
 
     /**
      * Emite un evento a todos los observers suscritos de forma concurrente.
@@ -91,14 +91,12 @@ class OrderEventBus {
 
             logger.info(`[OrderEventBus] Notificando evento "${event}" a ${this._observers.length} observer(s).`);
 
-            // Ejecución Concurrente con Aislamiento de Fallos (UTN Robustness):
-            // Promise.allSettled garantiza que si un observer falla, los demás
-            // sigan su ejecución.
+            // Ejecutar observers en paralelo con aislamiento de fallos
             const results = await Promise.allSettled(
                 this._observers.map(obs => obs.update(event, payload))
             );
 
-            // Auditoría Post-Mortem: Loguea fallos individuales sin propagar el error.
+            // Registrar fallos de observers sin propagar el error
             results.forEach((result, index) => {
                 if (result.status === 'rejected') {
                     logger.error(`[OrderEventBus] Observer ${this._observers[index]?.constructor.name} falló`, {

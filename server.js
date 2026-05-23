@@ -81,7 +81,6 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-// Note: mongoSanitize removed (no longer needed with Prisma/PostgreSQL)
 app.use(compression());
 app.use(hpp());
 

@@ -38,7 +38,7 @@ const STRATEGY_MAP = {
  */
 function resolveStrategy(tipo) {
     const strategy = STRATEGY_MAP[tipo];
-    // Manejo de Excepciones: Bloquea tipos de producto no registrados para
+    // Prevenir tipos de producto no implementados
     // forzar la implementación de su ConcreteStrategy correspondiente.
     if (!strategy) {
         throw new Error(
