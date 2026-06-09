@@ -12,7 +12,6 @@
  * extensión (agregar 'Subscription') pero cerrado a modificación del contexto.
  */
 
-const PhysicalProductStrategy = require('./PhysicalProductStrategy');
 const DigitalProductStrategy  = require('./DigitalProductStrategy');
 
 /**
@@ -23,7 +22,6 @@ const DigitalProductStrategy  = require('./DigitalProductStrategy');
  * @type {Object.<string, import('./PricingStrategy')>}
  */
 const STRATEGY_MAP = {
-    'PHYSICAL': DigitalProductStrategy, // Fallback de seguridad: tratar físicos como digitales
     'DIGITAL':  DigitalProductStrategy,
 };
 
@@ -32,7 +30,7 @@ const STRATEGY_MAP = {
  * Centraliza la lógica de selección que antes estaba dispersa como
  * condicionales `if/else` dentro de `productToDTO()`.
  *
- * @param {string} tipo - Valor del campo `tipo` en Prisma ('Fisico' | 'Digital').
+ * @param {string} tipo - Valor del campo `tipo` en Prisma ('Digital').
  * @returns {import('./PricingStrategy')} La instancia de ConcreteStrategy adecuada.
  * @throws {Error} Si el tipo de producto no tiene una estrategia registrada.
  */

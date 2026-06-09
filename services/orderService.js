@@ -96,7 +96,7 @@ class OrderService {
             return await tx.order.create({
                 data: {
                     userId: user.id || user._id?.toString() || user,
-                    paymentMethod: paymentMethod || 'mercadopago',
+                    paymentMethod: (paymentMethod ? paymentMethod.toUpperCase() : 'MERCADOPAGO'),
                     shippingPrice: 0,
                     totalPrice: calculatedTotal,
                     status: 'PENDING',

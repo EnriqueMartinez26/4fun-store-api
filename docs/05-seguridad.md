@@ -8,7 +8,11 @@ Se implementaron múltiples medidas y tecnologías transversales para resguardar
    - Almacenamiento seguro de passwords en la base de datos aplicando algoritmos de hash unidireccional con sal (`bcryptjs`).
 
 2. **Autenticación mediante JWT en Cookies HttpOnly**:
-   - Los JSON Web Tokens (JWT) no se devuelven en el cuerpo del JSON ni se guardan en el LocalStorage del cliente. Se inyectan en cookies con flags `httpOnly` y `secure` (en producción), mitigando ataques de Cross-Site Scripting (XSS).
+   - Los JSON Web Tokens (JWT) no se almacenan en LocalStorage para evitar ataques de Cross-Site Scripting (XSS).
+   - Se inyectan mediante cabecera `Set-Cookie` con las siguientes directivas de seguridad:
+     - `httpOnly: true` (impide acceso al token desde JavaScript en el navegador).
+     - `secure: process.env.NODE_ENV === 'production'` (transporte cifrado forzado solo bajo HTTPS en entornos productivos).
+     - `sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax'` (manejo adecuado para CORS y peticiones cross-site).
 
 3. **Cabeceras HTTP Seguras (Helmet)**:
    - Configuración automatizada de cabeceras HTTP de seguridad básicas para mitigar ataques como Clickjacking, MIME-sniffing y cross-site scripting.
@@ -22,3 +26,6 @@ Se implementaron múltiples medidas y tecnologías transversales para resguardar
 6. **Sanitización de Datos y Parámetros**:
    - Uso de `express-validator` para forzar esquemas y sanean cuerpos de peticiones en las rutas.
    - Uso de middleware `hpp` para prevenir ataques de contaminación de parámetros HTTP (Parameter Pollution).
+
+7. **Aislamiento de Herramientas de Diagnóstico**:
+   - El endpoint de diagnóstico `/debug/smtp` está restringido estrictamente para entornos no productivos (`NODE_ENV !== 'production'`). Adicionalmente, cualquier credencial o secreto impreso en la response es enmascarado para evitar filtración accidental de contraseñas.
