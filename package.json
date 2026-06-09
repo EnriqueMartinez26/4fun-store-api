@@ -1,7 +1,7 @@
 {
-  "name": "4fun-backend",
+  "name": "4fun-store-api",
   "version": "1.0.0",
-  "description": "Backend para la tienda de artículos deportivos y videojuegos 4Fun",
+  "description": "REST API for a digital videogame marketplace with users, catalog, cart, orders, digital keys and admin transaction approval.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
