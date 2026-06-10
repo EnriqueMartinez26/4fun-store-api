@@ -1,87 +1,146 @@
 # 4Fun Store API
 
-API REST para un sistema e-commerce académico orientado a la venta de videojuegos digitales. El proyecto implementa gestión de usuarios, autenticación, catálogo de productos, carrito, órdenes de compra, entrega de claves digitales y administración de transacciones bajo un flujo de aprobación.
+API REST de **4Fun Store**, sistema e-commerce académico orientado a la venta de videojuegos digitales. Implementa usuarios, autenticación, catálogo, carrito, órdenes, entrega de claves digitales y administración de transacciones bajo un flujo de aprobación.
 
-## Alcance del proyecto
+## Estado académico final
 
-Este backend forma parte de un proyecto de tesis de Tecnicatura en Programación. Su objetivo es demostrar el análisis, diseño e implementación de un sistema web con reglas de negocio reales, persistencia relacional, seguridad básica, separación por capas y trazabilidad de operaciones.
+| Item | Estado |
+| :--- | :--- |
+| Versión académica | `v1.0.0-thesis` |
+| Rama final consolidada | `main` |
+| Rama de trazabilidad funcional | `tesis/flujo-principal` |
+| Deploy API | https://4fun-store-api.vercel.app |
+| Health check | https://4fun-store-api.vercel.app/health |
+| Frontend productivo | https://4fun-store-web.vercel.app |
+| Base de datos | Supabase PostgreSQL |
+| Estado de entrega | Cerrado y validado como Hito M6 |
+
+## Alcance
+
+Este backend forma parte de una tesis de Tecnicatura en Programación. Su objetivo es demostrar análisis, diseño e implementación de un sistema web con reglas de negocio reales, persistencia relacional, seguridad básica, separación por capas y trazabilidad de operaciones.
 
 El sistema se enfoca exclusivamente en videojuegos digitales. La entrega del producto se modela mediante claves digitales asociadas a órdenes pagadas.
 
-### Funcionalidades principales
-- Registro e inicio de sesión de usuarios.
-- Autenticación mediante JWT y cookies HttpOnly.
-- Roles de usuario: comprador, vendedor y administrador.
-- Gestión de catálogo de videojuegos digitales.
-- Clasificación por plataforma y género.
-- Carrito de compras persistente.
-- Creación de órdenes de compra.
-- Asignación de claves digitales a órdenes pagadas.
-- Gestión administrativa de productos, órdenes y usuarios.
-- Sistema de transacciones con aprobación administrativa.
-- Validaciones de negocio y manejo centralizado de errores.
-- Registro de eventos mediante logging.
+## Deploy académico
+
+API publicada:
+
+```text
+https://4fun-store-api.vercel.app
+```
+
+Health check:
+
+```text
+https://4fun-store-api.vercel.app/health
+```
+
+Respuesta esperada:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+Frontend productivo autorizado por CORS:
+
+```text
+https://4fun-store-web.vercel.app
+```
+
+## Funcionalidades principales
+
+* Registro e inicio de sesión.
+* Autenticación con JWT y cookies HttpOnly.
+* Roles: comprador, vendedor y administrador.
+* Catálogo de videojuegos digitales.
+* Clasificación por plataforma y género.
+* Carrito persistente por usuario.
+* Creación de órdenes.
+* Marcado administrativo de pago simulado.
+* Asignación de claves digitales.
+* Creación de transacciones en custodia.
+* Aprobación o rechazo administrativo de transacciones.
+* Historial de compras.
+* Validaciones de negocio.
+* Manejo centralizado de errores.
+* Logging.
 
 ## Arquitectura
 
-El backend utiliza una arquitectura MVC + Services:
+El backend utiliza arquitectura MVC + Services:
 
-- **Routes**: definen los endpoints HTTP.
-- **Middlewares**: aplican autenticación, autorización, validaciones y manejo transversal.
-- **Controllers**: reciben la request y delegan la lógica.
-- **Services**: concentran reglas de negocio.
-- **Prisma**: gestiona el acceso a PostgreSQL.
-- **Utils**: contiene utilidades compartidas como logger y errores personalizados.
+```text
+Request
+  -> Route
+  -> Middleware
+  -> Controller
+  -> Service
+  -> Prisma
+  -> PostgreSQL
+```
 
-Flujo general:
-`Request → Route → Middleware → Controller → Service → Prisma → PostgreSQL`
+| Capa          | Responsabilidad                                           |
+| :------------ | :-------------------------------------------------------- |
+| `routes`      | Definición de endpoints HTTP.                             |
+| `middlewares` | Autenticación, autorización y validaciones transversales. |
+| `controllers` | Adaptación request/response.                              |
+| `services`    | Reglas de negocio.                                        |
+| `prisma`      | Modelo relacional y acceso a datos.                       |
+| `utils`       | Logger, errores y utilidades compartidas.                 |
 
 ## Tecnologías
-- Node.js
-- Express
-- PostgreSQL
-- Prisma ORM
-- JWT
-- bcrypt
-- Helmet
-- CORS
-- express-rate-limit
-- Winston
-- Jest
+
+* Node.js
+* Express
+* PostgreSQL
+* Supabase
+* Prisma ORM
+* JWT
+* bcrypt
+* Helmet
+* CORS
+* express-rate-limit
+* Winston
+* Jest
 
 ## Modelo de dominio
 
 Entidades principales:
-- User
-- SellerProfile
-- Product
-- Platform
-- Genre
-- Cart
-- CartItem
-- Order
-- OrderItem
-- DigitalKey
-- Transaction
-- Coupon
-- Review
 
-## Flujo principal
-1. El usuario se registra.
-2. El usuario inicia sesión.
-3. El usuario explora el catálogo.
-4. El usuario agrega productos digitales al carrito.
-5. El usuario crea una orden.
-6. El administrador marca la orden como pagada.
-7. El sistema asigna claves digitales disponibles.
-8. El sistema crea una transacción pendiente de aprobación.
-9. El administrador aprueba o rechaza la transacción.
+* User
+* SellerProfile
+* Product
+* Platform
+* Genre
+* Cart
+* CartItem
+* Order
+* OrderItem
+* DigitalKey
+* Transaction
+* Coupon
+* Review
+
+## Flujo principal validado
+
+```text
+registro/login
+  -> catálogo digital
+  -> carrito con stock por claves digitales
+  -> checkout y generación de orden
+  -> pago simulado/admin
+  -> asignación de claves digitales
+  -> transacción en custodia
+  -> aprobación/rechazo administrativo
+  -> historial del comprador
+```
 
 ## Variables de entorno
 
-Copiar `.env.example` como `.env` y completar los valores requeridos.
+Local:
 
-Variables principales:
 ```env
 PORT=9003
 NODE_ENV=development
@@ -95,45 +154,83 @@ SMTP_EMAIL=
 SMTP_PASSWORD=
 CONTACT_ADMIN_EMAIL=
 LOG_LEVEL=info
+DISPUTE_WINDOW_DAYS=0
 ```
 
-## Instalación
+Producción:
+
+```env
+NODE_ENV=production
+FRONTEND_URL=https://4fun-store-web.vercel.app
+BACKEND_URL=https://4fun-store-api.vercel.app
+DATABASE_URL=<Supabase PostgreSQL>
+JWT_SECRET=<configurado en Vercel>
+DISPUTE_WINDOW_DAYS=0
+```
+
+No deben publicarse credenciales reales, secretos JWT ni URLs privadas de base de datos.
+
+## Instalación local
+
 ```bash
 npm install
 npx prisma generate
 npx prisma db push
+npx prisma db seed
 npm run dev
 ```
 
-El servidor queda disponible en:
-`http://localhost:9003`
+Servidor local:
 
-## Pruebas
-```bash
-npm test
+```text
+http://localhost:9003
 ```
+
+## Scripts
+
+| Script                | Descripción                   |
+| :-------------------- | :---------------------------- |
+| `npm start`           | Ejecuta `server.js` con Node. |
+| `npm run dev`         | Ejecuta backend con Nodemon.  |
+| `npm test`            | Ejecuta pruebas con Jest.     |
+| `npm run postinstall` | Genera Prisma Client.         |
+
+## Pruebas y evidencias
 
 Las pruebas cubren casos críticos del sistema, incluyendo autenticación, órdenes, claves digitales, permisos y transacciones.
 
+La documentación formal de entrega y evidencias visuales se encuentran consolidadas en el repositorio frontend:
+
+```text
+https://github.com/EnriqueMartinez26/4fun-store-web
+```
+
+Documento principal:
+
+```text
+docs/m6-acta-entrega-final.md
+```
+
 ## Limitaciones académicas
-- El sistema no procesa dinero real.
-- El flujo de pago se modela para demostrar el ciclo de orden y aprobación.
-- El sistema se enfoca únicamente en productos digitales.
-- La aprobación de transacciones representa una regla administrativa interna, no una transferencia bancaria real.
-- Las credenciales reales deben gestionarse fuera del repositorio.
+
+* El sistema no procesa dinero real.
+* El flujo de pago se modela para demostrar ciclo de orden, entrega digital y aprobación.
+* Mercado Pago se representa como flujo simulado o administrativo.
+* La aprobación de transacciones representa una regla administrativa interna, no una transferencia bancaria real.
+* El sistema se enfoca únicamente en productos digitales.
+* Las credenciales reales deben gestionarse fuera del repositorio.
 
 ## Mejoras futuras
-- Integración completa con una pasarela de pagos.
-- Panel de métricas avanzado.
-- Mayor cobertura de pruebas automatizadas.
-- Auditoría financiera externa.
-- Optimización de consultas y carga.
-- Separación en servicios independientes si el sistema escala.
 
-## Estado académico final
+* Integración real con pasarela de pagos.
+* Panel de métricas avanzado.
+* Mayor cobertura automatizada end-to-end.
+* Auditoría financiera externa.
+* Optimización de consultas.
+* Separación en servicios independientes si el sistema escala.
 
-Este repositorio contiene la versión final entregable de la tesis 4Fun Store.  
-La rama `main` representa el estado final consolidado, mientras que la rama `tesis/flujo-principal` conserva la trazabilidad del cierre funcional y del despliegue académico.
+## Release final
 
-Release final: `v1.0.0-thesis`.
-
+```text
+v1.0.0-thesis
+```
