@@ -1,6 +1,31 @@
 # 4Fun Store API
 
+<p align="center">
+  <img src="docs/assets/github/banner.png" alt="4Fun Store API" />
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Node.js-Express-green" alt="Node.js" />
+  <img src="https://img.shields.io/badge/Prisma-ORM-blue" alt="Prisma" />
+  <img src="https://img.shields.io/badge/PostgreSQL-Supabase-blue" alt="PostgreSQL" />
+  <img src="https://img.shields.io/badge/Deploy-Vercel-black" alt="Deploy" />
+  <img src="https://img.shields.io/badge/Thesis-v1.0.0--thesis-success" alt="Status" />
+</p>
+
+---
+
+## Links rápidos
+
+- **API desplegada**: https://4fun-store-api.vercel.app
+- **Health check**: https://4fun-store-api.vercel.app/health
+- **Web desplegada**: https://4fun-store-web.vercel.app
+- **Acta de entrega en Frontend**: [m6-acta-entrega-final.md (en web repo)](https://github.com/EnriqueMartinez26/4fun-store-web/blob/main/docs/m6-acta-entrega-final.md)
+- **Release final**: `v1.0.0-thesis`
+
+---
+
 API REST de **4Fun Store**, sistema e-commerce académico orientado a la venta de videojuegos digitales. Implementa usuarios, autenticación, catálogo, carrito, órdenes, entrega de claves digitales y administración de transacciones bajo un flujo de aprobación.
+
 
 ## Estado académico final
 
