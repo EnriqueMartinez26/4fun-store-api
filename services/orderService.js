@@ -397,6 +397,22 @@ class OrderService {
             throw new ErrorResponse('Ya existe una transacción de escrow para esta orden', 400);
         }
 
+        // Check that keys have been assigned for all digital products in the order
+        const assignedKeysCount = await prisma.digitalKey.count({
+            where: { orderId }
+        });
+
+        let requiredDigitalKeysCount = 0;
+        for (const item of order.orderItems || []) {
+            if (item.product?.type === 'DIGITAL') {
+                requiredDigitalKeysCount += Number(item.quantity);
+            }
+        }
+
+        if (assignedKeysCount < requiredDigitalKeysCount) {
+            throw new ErrorResponse('La orden debe tener todas las keys asignadas antes de crear la transacción de escrow', 400);
+        }
+
         if (order.orderItems?.length > 0) {
             const firstItem = order.orderItems[0];
             const sellerId = firstItem.product?.sellerId;

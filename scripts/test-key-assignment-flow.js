@@ -221,7 +221,7 @@ function validateAssignedKeys(order) {
   const grouped = groupAssignedKeysByProduct(order);
 
   assert(grouped['Space Rift Digital']?.keys.length === 2, '[ERROR] Space Rift Digital debe tener exactamente 2 keys.');
-  assert(grouped['Pixel Quest Digital']?.keys.length === 1, '[ERROR] Pixel Quest Digital debe tener exactly 1 key.');
+  assert(grouped['Pixel Quest Digital']?.keys.length === 1, '[ERROR] Pixel Quest Digital debe tener exactamente 1 key.');
 
   for (const key of order.digitalKeys) {
     assert(key.orderId === order.id, '[ERROR] Una key asignada no apunta a la orden correcta.');
