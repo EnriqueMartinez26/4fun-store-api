@@ -129,3 +129,11 @@ Las pruebas cubren casos críticos del sistema, incluyendo autenticación, órde
 - Auditoría financiera externa.
 - Optimización de consultas y carga.
 - Separación en servicios independientes si el sistema escala.
+
+## Estado académico final
+
+Este repositorio contiene la versión final entregable de la tesis 4Fun Store.  
+La rama `main` representa el estado final consolidado, mientras que la rama `tesis/flujo-principal` conserva la trazabilidad del cierre funcional y del despliegue académico.
+
+Release final: `v1.0.0-thesis`.
+
