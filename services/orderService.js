@@ -47,6 +47,10 @@ class OrderService {
             const product = await prisma.product.findUnique({ where: { id: item.product } });
             if (!product) throw new ErrorResponse(`Producto no encontrado: ${item.name}`, 400);
 
+            if (product.status !== 'ACTIVE') {
+                throw new ErrorResponse(`Este producto ya no está disponible: ${product.name}`, 400);
+            }
+
             // RN de Disponibilidad por Tipología (Físico vs Digital)
             if (product.type === 'DIGITAL') {
                 const availableKeys = await prisma.digitalKey.count({
@@ -242,8 +246,7 @@ class OrderService {
             where: { id: orderId },
             include: {
                 user: { select: { id: true, name: true, email: true } },
-                orderItems: { include: { product: true } },
-                digitalKeys: { select: { id: true, key: true, productId: true } }
+                orderItems: { include: { product: true } }
             }
         });
 
@@ -251,16 +254,47 @@ class OrderService {
 
         const now = new Date();
 
-        const paymentResult = await prisma.$transaction(async (tx) => {
-            let assignedKeysCount = 0;
+        const updatedOrder = await prisma.order.update({
+            where: { id: orderId },
+            data: {
+                isPaid: true,
+                paidAt: order.paidAt || now
+            },
+            include: {
+                user: { select: { id: true, name: true, email: true } },
+                orderItems: { include: { product: true } }
+            }
+        });
 
-            await tx.order.update({
-                where: { id: orderId },
-                data: {
-                    isPaid: true,
-                    paidAt: order.paidAt || now
-                }
-            });
+        // Notify event bus of the payment event, but do not send keys yet as they are not assigned.
+        await orderEventBus.notify('order:paid', {
+            order: updatedOrder,
+            digitalKeys: [],
+            meta: { shouldSendKeysEmail: false }
+        });
+
+        return {
+            ...updatedOrder,
+            _id: updatedOrder.id
+        };
+    }
+
+    async assignKeysToOrder(orderId) {
+        const order = await prisma.order.findUnique({
+            where: { id: orderId },
+            include: {
+                user: { select: { id: true, name: true, email: true } },
+                orderItems: { include: { product: true } }
+            }
+        });
+
+        if (!order) throw new ErrorResponse('Orden no encontrada', 404);
+        if (!order.isPaid) throw new ErrorResponse('La orden debe estar pagada para asignar keys', 400);
+
+        const now = new Date();
+
+        const assignmentResult = await prisma.$transaction(async (tx) => {
+            let assignedKeysCount = 0;
 
             for (const item of order.orderItems || []) {
                 if (item.product?.type !== 'DIGITAL') continue;
@@ -318,7 +352,7 @@ class OrderService {
                 });
             }
 
-            const paidOrder = await tx.order.findUnique({
+            const updatedOrder = await tx.order.findUnique({
                 where: { id: orderId },
                 include: {
                     user: { select: { id: true, name: true, email: true } },
@@ -327,51 +361,61 @@ class OrderService {
                 }
             });
 
-            // RN (Sistema de Escrow): Cuando la orden se paga, crear transacción en PENDING_APPROVAL
-            // El dinero queda retenido hasta que Admin lo apruebe
-            if (paidOrder && paidOrder.orderItems?.length > 0) {
-                const firstItem = paidOrder.orderItems[0];
-                const sellerId = firstItem.product?.sellerId;
-
-                if (sellerId) {
-                    await tx.transaction.create({
-                        data: {
-                            orderId: paidOrder.id,
-                            sellerId,
-                            amount: paidOrder.totalPrice,
-                            status: 'PENDING_APPROVAL'
-                        }
-                    });
-
-                    logger.info(`[OrderService] Transacción de escrow creada para orden ${paidOrder.id} - Vendedor: ${sellerId} - Monto: $${paidOrder.totalPrice} - Status: PENDING_APPROVAL`);
-                }
-            }
-
-            return { paidOrder, assignedKeysCount };
+            return { updatedOrder, assignedKeysCount };
         });
 
-        const paidOrder = paymentResult?.paidOrder;
-        const shouldSendKeysEmail = !order.isPaid || (paymentResult?.assignedKeysCount || 0) > 0;
-
-        /**
-         * Patrón GoF: Observer — Emisión del Evento al Subject.
-         * En lugar de llamar directamente a EmailService (acoplamiento rígido),
-         * emitimos un evento al bus. Cada ConcreteObserver suscrito reaccionará
-         * de forma independiente y aislada a sus propios fallos.
-         *
-         * GoF §Observer — Subject.notify(): "Notifies its observers when its
-         * state changes." El 'estado' que cambió es: la orden fue pagada.
-         */
-        await orderEventBus.notify('order:paid', {
-            order:       paidOrder,
-            digitalKeys: paidOrder?.digitalKeys || [],
-            meta:        { shouldSendKeysEmail }
-        });
+        // Notify event bus to trigger email now that keys are assigned
+        if (assignmentResult?.assignedKeysCount > 0) {
+            await orderEventBus.notify('order:paid', {
+                order:       assignmentResult.updatedOrder,
+                digitalKeys: assignmentResult.updatedOrder?.digitalKeys || [],
+                meta:        { shouldSendKeysEmail: true }
+            });
+        }
 
         return {
-            ...(paidOrder || order),
-            _id: (paidOrder || order).id
+            ...assignmentResult.updatedOrder,
+            _id: assignmentResult.updatedOrder.id
         };
+    }
+
+    async createEscrowTransaction(orderId) {
+        const order = await prisma.order.findUnique({
+            where: { id: orderId },
+            include: {
+                orderItems: { include: { product: true } }
+            }
+        });
+
+        if (!order) throw new ErrorResponse('Orden no encontrada', 404);
+        if (!order.isPaid) throw new ErrorResponse('La orden debe estar pagada para crear la transacción de escrow', 400);
+
+        const existingTransaction = await prisma.transaction.findUnique({
+            where: { orderId }
+        });
+        if (existingTransaction) {
+            throw new ErrorResponse('Ya existe una transacción de escrow para esta orden', 400);
+        }
+
+        if (order.orderItems?.length > 0) {
+            const firstItem = order.orderItems[0];
+            const sellerId = firstItem.product?.sellerId;
+
+            if (sellerId) {
+                const transaction = await prisma.transaction.create({
+                    data: {
+                        orderId: order.id,
+                        sellerId,
+                        amount: order.totalPrice,
+                        status: 'PENDING_APPROVAL'
+                    }
+                });
+
+                logger.info(`[OrderService] Transacción de escrow creada para orden ${order.id} - Vendedor: ${sellerId} - Monto: $${order.totalPrice} - Status: PENDING_APPROVAL`);
+                return transaction;
+            }
+        }
+        throw new ErrorResponse('No se pudo crear la transacción de escrow (vendedor no encontrado)', 400);
     }
 }
 

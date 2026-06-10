@@ -1,4 +1,4 @@
-import { PrismaClient, Role, PaymentMethod, OrderStatus, ProductStatus, TransactionStatus, KeyStatus } from '@prisma/client';
+import { PrismaClient, Role, ProductStatus, KeyStatus } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 import * as bcrypt from 'bcrypt';
@@ -10,148 +10,210 @@ const prisma = new PrismaClient({ adapter });
 
 async function main() {
   const saltRounds = 10;
-  const buyerPassword = await bcrypt.hash('buyer123', saltRounds);
+  const commonPassword = await bcrypt.hash('password123', saltRounds);
 
-  console.log('👤 Buscando/Asegurando usuario de prueba...');
-  const buyer = await prisma.user.upsert({
-    where: { email: 'emartinez.03@hotmail.com' },
-    update: {},
-    create: {
-      email: 'emartinez.03@hotmail.com',
-      password: buyerPassword,
-      name: 'Emiliano Martinez',
+  console.log('[INFO] Limpiando base de datos: órdenes, transacciones, keys, carritos y productos.');
+  
+  // Limpieza en orden inverso de dependencias para evitar errores de Foreign Keys
+  await prisma.transaction.deleteMany({});
+  await prisma.payment.deleteMany({});
+  await prisma.shippingAddress.deleteMany({});
+  await prisma.orderItem.deleteMany({});
+  await prisma.order.deleteMany({});
+  await prisma.digitalKey.deleteMany({});
+  await prisma.cartItem.deleteMany({});
+  await prisma.cart.deleteMany({});
+  await prisma.wishlistItem.deleteMany({});
+  await prisma.wishlist.deleteMany({});
+  await prisma.reviewHelpfulVote.deleteMany({});
+  await prisma.review.deleteMany({});
+  await prisma.productRequirement.deleteMany({});
+  await prisma.bundleItem.deleteMany({});
+  await prisma.product.deleteMany({});
+  await prisma.sellerProfile.deleteMany({});
+  await prisma.user.deleteMany({});
+  await prisma.platform.deleteMany({});
+  await prisma.genre.deleteMany({});
+
+  console.log('[INFO] Creando usuarios base: buyer, seller y admin.');
+  
+  const buyerId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+  const sellerId = 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22';
+  const adminId = 'c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a33';
+
+  // Buyer verificado
+  const buyer = await prisma.user.create({
+    data: {
+      id: buyerId,
+      email: 'buyer@4fun.test',
+      password: commonPassword,
+      name: 'Comprador Test',
       role: Role.BUYER,
       isVerified: true,
     },
   });
 
-  // Buscamos un administrador existente para las aprobaciones de transacciones
-  const admin = await prisma.user.findFirst({
-    where: { role: Role.ADMIN }
-  });
-
-  console.log('🛒 Buscando productos existentes para simular compras...');
-  
-  // Obtenemos productos activos que tengan un vendedor asociado
-  const availableProducts = await prisma.product.findMany({
-    where: { 
-      status: ProductStatus.ACTIVE,
-      stock: { gt: 0 }
+  // Seller verificado
+  const seller = await prisma.user.create({
+    data: {
+      id: sellerId,
+      email: 'seller@4fun.test',
+      password: commonPassword,
+      name: 'Vendedor Test',
+      role: Role.SELLER,
+      isVerified: true,
     },
-    take: 3
   });
 
-  if (availableProducts.length === 0) {
-    console.log('⚠️ No se encontraron productos ACTIVOS con stock en la base de datos.');
-    console.log('Frenando simulación: Asegurate de tener productos cargados manualmente o por otro medio.');
-    return;
-  }
-
-  console.log(`✅ Se encontraron ${availableProducts.length} productos para la simulación.`);
-
-  // --- SIMULACIÓN 1: Compra Completada ---
-  console.log('🛠️ Creando simulación de compra completada...');
-  
-  const product1 = availableProducts[0];
-  const product2 = availableProducts[1] || product1; // Usar el mismo si solo hay uno
-
-  const totalOrder1 = Number(product1.price) + (availableProducts[1] ? Number(product2.price) : 0);
-
-  const order1 = await prisma.order.create({
+  // Perfil del Seller aprobado
+  await prisma.sellerProfile.create({
     data: {
-      userId: buyer.id,
-      totalPrice: totalOrder1,
-      shippingPrice: 0,
-      status: OrderStatus.DELIVERED,
-      isPaid: true,
-      paidAt: new Date(),
-      isDelivered: true,
-      deliveredAt: new Date(),
-      paymentMethod: PaymentMethod.MERCADOPAGO,
-      orderItems: {
-        create: [
-          { productId: product1.id, quantity: 1, unitPriceAtPurchase: product1.price },
-          ...(availableProducts[1] ? [{ productId: product2.id, quantity: 1, unitPriceAtPurchase: product2.price }] : []),
-        ]
-      },
-      shippingAddress: {
-        create: {
-          fullName: buyer.name,
-          street: 'Calle Falsa 123',
-          city: 'Córdoba',
-          zip: '5000',
-          country: 'Argentina'
-        }
-      }
-    }
+      id: 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a23',
+      userId: sellerId,
+      storeName: '4Fun Games Store',
+      storeDescription: 'Tienda de pruebas oficial de 4Fun Store',
+      isApproved: true,
+    },
   });
 
-  // Claves Digitales (si aplica)
+  // Admin verificado
+  const admin = await prisma.user.create({
+    data: {
+      id: adminId,
+      email: 'admin@4fun.test',
+      password: commonPassword,
+      name: 'Administrador Test',
+      role: Role.ADMIN,
+      isVerified: true,
+    },
+  });
+
+  console.log('[INFO] Creando catálogo base: plataformas y géneros.');
+
+  const platformPcId = 'd0eebc99-9c0b-4ef8-bb6d-6bb9bd380a44';
+  await prisma.platform.create({
+    data: {
+      id: platformPcId,
+      slug: 'pc',
+      name: 'PC',
+      isActive: true,
+    },
+  });
+
+  const genreRpgId = 'e0eebc99-9c0b-4ef8-bb6d-6bb9bd380a55';
+  await prisma.genre.create({
+    data: {
+      id: genreRpgId,
+      slug: 'rpg',
+      name: 'RPG',
+      isActive: true,
+    },
+  });
+
+  const genreAventuraId = 'f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a66';
+  await prisma.genre.create({
+    data: {
+      id: genreAventuraId,
+      slug: 'aventura',
+      name: 'Aventura',
+      isActive: true,
+    },
+  });
+
+  console.log('[INFO] Creando productos digitales.');
+
+  const prodSpaceRiftId = '10eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+  const prodPixelQuestId = '10eebc99-9c0b-4ef8-bb6d-6bb9bd380a22';
+  const prodNoKeysId = '10eebc99-9c0b-4ef8-bb6d-6bb9bd380a33';
+
+  await prisma.product.create({
+    data: {
+      id: prodSpaceRiftId,
+      name: 'Space Rift Digital',
+      description: 'Una aventura espacial única en formato digital.',
+      price: 59.99,
+      status: ProductStatus.ACTIVE,
+      stock: 3,
+      releaseDate: new Date('2026-01-01'),
+      developer: 'Indie Studio',
+      sellerId: sellerId,
+      platformId: platformPcId,
+      genreId: genreRpgId,
+    },
+  });
+
+  await prisma.product.create({
+    data: {
+      id: prodPixelQuestId,
+      name: 'Pixel Quest Digital',
+      description: 'Un RPG retro pixel art desafiante.',
+      price: 29.99,
+      status: ProductStatus.ACTIVE,
+      stock: 1,
+      releaseDate: new Date('2026-02-01'),
+      developer: 'Pixel Lab',
+      sellerId: sellerId,
+      platformId: platformPcId,
+      genreId: genreRpgId,
+    },
+  });
+
+  await prisma.product.create({
+    data: {
+      id: prodNoKeysId,
+      name: 'No Keys Demo',
+      description: 'Demo de juego sin stock disponible.',
+      price: 0.00,
+      status: ProductStatus.OUT_OF_STOCK,
+      stock: 0,
+      releaseDate: new Date('2026-03-01'),
+      developer: 'Test Dev',
+      sellerId: sellerId,
+      platformId: platformPcId,
+      genreId: genreRpgId,
+    },
+  });
+
+  console.log('[INFO] Creando llaves digitales disponibles.');
+
+  // 3 Keys para Space Rift
+  await prisma.digitalKey.createMany({
+    data: [
+      { id: '20eebc99-9c0b-4ef8-bb6d-6bb9bd380a01', productId: prodSpaceRiftId, key: 'SRD-KEY-001', status: KeyStatus.AVAILABLE },
+      { id: '20eebc99-9c0b-4ef8-bb6d-6bb9bd380a02', productId: prodSpaceRiftId, key: 'SRD-KEY-002', status: KeyStatus.AVAILABLE },
+      { id: '20eebc99-9c0b-4ef8-bb6d-6bb9bd380a03', productId: prodSpaceRiftId, key: 'SRD-KEY-003', status: KeyStatus.AVAILABLE },
+    ]
+  });
+
+  // 1 Key para Pixel Quest
   await prisma.digitalKey.create({
+    data: { id: '20eebc99-9c0b-4ef8-bb6d-6bb9bd380a04', productId: prodPixelQuestId, key: 'PQD-KEY-001', status: KeyStatus.AVAILABLE }
+  });
+
+  // Crear carritos vacíos para asegurar inicialización limpia
+  await prisma.cart.create({
     data: {
-      productId: product1.id,
-      key: `SIM-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
-      status: KeyStatus.SOLD,
-      orderId: order1.id,
-      soldAt: new Date()
+      id: '30eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+      userId: buyerId,
     }
   });
 
-  // Transacción de Escrow (Fondos Liberados)
-  await prisma.transaction.create({
-    data: {
-      orderId: order1.id,
-      sellerId: product1.sellerId,
-      amount: totalOrder1,
-      status: TransactionStatus.FUNDS_RELEASED,
-      approvedAt: new Date(),
-      approvedBy: admin?.id // Si no hay admin, queda en null o podrías forzar uno
-    }
-  });
-
-  // --- SIMULACIÓN 2: Compra en Proceso (Pendiente de aprobación/entrega) ---
-  if (availableProducts.length >= 1) {
-    console.log('🛠️ Creando simulación de compra en proceso...');
-    
-    const productPending = availableProducts[availableProducts.length - 1];
-
-    const order2 = await prisma.order.create({
-      data: {
-        userId: buyer.id,
-        totalPrice: productPending.price,
-        shippingPrice: 0,
-        status: OrderStatus.PROCESSING,
-        isPaid: true,
-        paidAt: new Date(),
-        paymentMethod: PaymentMethod.MERCADOPAGO,
-        orderItems: {
-          create: [
-            { productId: productPending.id, quantity: 1, unitPriceAtPurchase: productPending.price },
-          ]
-        }
-      }
-    });
-
-    await prisma.transaction.create({
-      data: {
-        orderId: order2.id,
-        sellerId: productPending.sellerId,
-        amount: productPending.price,
-        status: TransactionStatus.PENDING_APPROVAL,
-      }
-    });
-  }
-
-  console.log('✨ Simulación finalizada con éxito.');
-  console.log(`📧 Usuario Comprador: ${buyer.email}`);
-  console.log(`🔑 Password: buyer123`);
+  console.log('[OK] Seed finalizado con éxito.');
+  console.log(`Comprador: ${buyer.email}`);
+  console.log(`Vendedor: ${seller.email} - Aprobado: Sí`);
+  console.log(`Admin: ${admin.email}`);
+  console.log(`Total productos creados: 3`);
+  console.log(`Total llaves disponibles: 4`);
+  console.log(`Órdenes previas limpiadas: 0 existentes`);
+  console.log(`Transacciones previas limpiadas: 0 existentes`);
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Error en el seed:', e);
+    console.error('[ERROR] Error en el seed:', e);
     process.exit(1);
   })
   .finally(async () => {
     await prisma.$disconnect();
+    pool.end();
   });

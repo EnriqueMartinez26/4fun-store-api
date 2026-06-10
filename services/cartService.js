@@ -84,10 +84,17 @@ class CartService {
 
         // Regla de Negocio (RN-07): "Concurrencia y Límite de Stock".
         // Bloquea adicionar una mercadería si excede las existencias físicas en el inventario.
-        if (product.stock < currentQty + quantity) {
+        const availableKeys = await prisma.digitalKey.count({
+            where: {
+                productId,
+                status: 'AVAILABLE'
+            }
+        });
+
+        if (availableKeys < currentQty + quantity) {
             const message = currentQty > 0 
-                ? `Ya tienes el máximo de unidades disponibles en tu carrito (${product.stock}).` 
-                : `Stock insuficiente. Solo quedan ${product.stock} unidades.`;
+                ? `Ya tienes el máximo de unidades disponibles en tu carrito (${availableKeys}).` 
+                : `Stock insuficiente. Solo quedan ${availableKeys} unidades.`;
             throw new ErrorResponse(message, 400);
         }
 
@@ -118,13 +125,38 @@ class CartService {
      * Aplica cuando el cliente typea en el input numérico directo.
      */
     async updateCartItem(userId, itemId, quantity) {
-        const cart = await prisma.cart.findUnique({ where: { userId }, include: { items: true } });
+        const cart = await prisma.cart.findUnique({
+            where: { userId },
+            include: {
+                items: {
+                    include: { product: true }
+                }
+            }
+        });
         if (!cart) throw new ErrorResponse('Carrito no encontrado', 404);
 
         const item = cart.items.find(i => i.id === itemId);
         if (!item) throw new ErrorResponse('Item no encontrado', 404);
 
-        // Actualizamos directo, ya que las validaciones complejas residen en addTo.
+        const product = item.product;
+        if (!product) throw new ErrorResponse('Producto no encontrado', 404);
+
+        if (product.status !== 'ACTIVE') {
+            throw new ErrorResponse('Este producto ya no está disponible', 400);
+        }
+
+        // Regla de Negocio (RN-07): "Concurrencia y Límite de Stock".
+        const availableKeys = await prisma.digitalKey.count({
+            where: {
+                productId: product.id,
+                status: 'AVAILABLE'
+            }
+        });
+
+        if (availableKeys < quantity) {
+            throw new ErrorResponse(`Stock insuficiente. Solo quedan ${availableKeys} unidades.`, 400);
+        }
+
         await prisma.cartItem.update({ where: { id: itemId }, data: { quantity } });
         logger.info(`Item actualizado en carrito para usuario: ${userId}`);
         return this.getCartWithDTO(userId);
