@@ -6,7 +6,9 @@ const {
   getUserOrders,
   getAllOrders,
   updateOrderStatus,
-  updateOrderToPaid
+  updateOrderToPaid,
+  assignKeysToOrder,
+  createEscrowTransaction
 } = require('../controllers/orderController');
 const { protect, authorize, ensureVerified } = require('../middlewares/auth');
 
@@ -36,6 +38,12 @@ router.get('/', protect, authorize('ADMIN'), getAllOrders);
 
 /** @route PUT /api/orders/:id/pay - Forzado manual de estado 'Pagado' (Auditoría). */
 router.put('/:id/pay', protect, authorize('ADMIN'), updateOrderToPaid);
+
+/** @route POST /api/orders/:id/assign-keys - Asignación manual de llaves digitales. */
+router.post('/:id/assign-keys', protect, authorize('ADMIN'), assignKeysToOrder);
+
+/** @route POST /api/orders/:id/escrow - Creación manual de la transacción escrow. */
+router.post('/:id/escrow', protect, authorize('ADMIN'), createEscrowTransaction);
 
 /** @route PATCH /api/orders/:id/status - Mutación de estados logísticos (Processing/Delivered). */
 router.patch('/:id/status', protect, authorize('ADMIN'), updateOrderStatus);

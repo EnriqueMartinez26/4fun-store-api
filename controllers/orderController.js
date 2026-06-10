@@ -97,3 +97,17 @@ exports.updateOrderToPaid = async (req, res, next) => {
     res.json({ success: true, order });
   } catch (error) { next(error); }
 };
+
+exports.assignKeysToOrder = async (req, res, next) => {
+  try {
+    const order = await OrderService.assignKeysToOrder(req.params.id);
+    res.json({ success: true, order });
+  } catch (error) { next(error); }
+};
+
+exports.createEscrowTransaction = async (req, res, next) => {
+  try {
+    const transaction = await OrderService.createEscrowTransaction(req.params.id);
+    res.json({ success: true, transaction });
+  } catch (error) { next(error); }
+};

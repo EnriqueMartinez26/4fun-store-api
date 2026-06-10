@@ -37,10 +37,10 @@ orderEventBus
 dotenv.config();
 validateEnv();
 
-// Connect to Supabase via Prisma on startup
-prisma.$connect()
-    .then(() => logger.info('✅ Conectado a Supabase (PostgreSQL via Prisma)'))
-    .catch(err => { logger.error('❌ Error conectando a Supabase:', err.message); process.exit(1); });
+// Prisma will connect lazily on the first query request.
+// This prevents cold-start initialization crashes in serverless environments.
+logger.info('ℹ️ Prisma Client inicializado (conexión perezosa habilitada)');
+
 
 const app = express();
 

@@ -26,7 +26,7 @@ class ProductComponentFactory {
             // mantener el polimorfismo intacto en OrderService.
             
             if (p.isBundle && p.bundleChildren) {
-                const bundle = new ProductBundle(p.id, p.nombre);
+                const bundle = new ProductBundle(p.id, p.name || p.nombre);
                 for (const child of p.bundleChildren) {
                     // Recursión para soportar "combos dentro de combos"
                     bundle.add(ProductComponentFactory.create(child.childProduct));
@@ -36,17 +36,18 @@ class ProductComponentFactory {
 
             // Caso base: Producto individual (Hoja)
             // RN (Robustez): Aseguramos que el precio sea un número válido.
-            const price = p.precio ? Number(p.precio) : 0;
+            const priceVal = p.price !== undefined ? p.price : p.precio;
+            const price = priceVal ? Number(priceVal) : 0;
             if (isNaN(price)) {
                 logger.warn(`[ProductComponentFactory] Precio inválido para producto ${p.id}. Usando 0.`);
             }
 
-            return new LeafProduct(p.id, p.nombre, isNaN(price) ? 0 : price);
+            return new LeafProduct(p.id, p.name || p.nombre, isNaN(price) ? 0 : price);
         } catch (error) {
             // Manejo de Excepciones (UTN): Logueamos el error de construcción del árbol
             // pero devolvemos un objeto Hoja "vacío" o de fallback para no romper la facturación.
             logger.error(`[ProductComponentFactory] Error construyendo componente para ${p?.id || 'unknown'}:`, error.message);
-            return new LeafProduct(p?.id || 'error', p?.nombre || 'Error de Carga', 0);
+            return new LeafProduct(p?.id || 'error', p?.name || p?.nombre || 'Error de Carga', 0);
         }
     }
 }

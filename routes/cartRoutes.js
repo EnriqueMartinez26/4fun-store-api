@@ -25,14 +25,24 @@ router.use(protect); // Global protector para este recurso
 /** @route GET /api/cart - Recupera el estado actual de la cesta del usuario. */
 router.get('/', getCart);
 
-/** @route POST /api/cart - Integra una nueva intención de compra (Producto + Cantidad). */
+/** @route POST /api/cart e /api/cart/items - Integra una nueva intención de compra. */
 router.post('/', addToCart);
+router.post('/items', addToCart);
 
-/** @route PUT /api/cart - Ajusta volúmenes o parámetros de ítems ya listados. */
+/** @route PUT/PATCH /api/cart, /api/cart/items, /api/cart/:itemId, /api/cart/items/:itemId - Ajusta volúmenes. */
 router.put('/', updateCartItem);
+router.put('/items', updateCartItem);
+router.put('/:itemId', updateCartItem);
+router.put('/items/:itemId', updateCartItem);
 
-/** @route DELETE /api/cart/:itemId - Expulsa una línea específica de la cesta. */
+router.patch('/', updateCartItem);
+router.patch('/items', updateCartItem);
+router.patch('/:itemId', updateCartItem);
+router.patch('/items/:itemId', updateCartItem);
+
+/** @route DELETE /api/cart/:itemId y /api/cart/items/:itemId - Expulsa una línea específica. */
 router.delete('/:itemId', removeFromCart);
+router.delete('/items/:itemId', removeFromCart);
 
 /** @route DELETE /api/cart - Vaciado total (Reset) de la instancia temporal. */
 router.delete('/', clearCart);

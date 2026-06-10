@@ -49,3 +49,8 @@ analisis_completo.json
 scripts/archive/
 
 /generated/prisma
+
+# Test artifacts/logs in scripts
+scripts/m2-*.json
+scripts/*.json
+
