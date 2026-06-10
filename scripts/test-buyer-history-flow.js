@@ -98,6 +98,10 @@ async function login(user) {
   assert(Array.isArray(setCookie) && setCookie.length > 0, `[ERROR] Set-Cookie no recibido para ${user.email}.`);
   const tokenCookie = setCookie.find((c) => c.startsWith('token='));
   assert(tokenCookie, `[ERROR] Cookie de token no recibida para ${user.email}.`);
+  assert(
+    tokenCookie.toLowerCase().includes('httponly'),
+    `[ERROR] Cookie token de ${user.email} no es HttpOnly.`
+  );
   return tokenCookie.split(';')[0];
 }
 
