@@ -46,12 +46,17 @@ describe('ProductService', () => {
         platform: 'pc',
         genre: 'action',
         sellerId: 'seller-id-123',
-        active: false
+        active: false,
+        imageId: 'https://cdn.example.com/cover.jpg'
       });
 
       expect(result.name).toBe('Half Life 3');
       expect(result.type).toBe('Digital');
-      expect(prisma.product.create).toHaveBeenCalled();
+      expect(prisma.product.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({
+          imageUrl: 'https://cdn.example.com/cover.jpg'
+        })
+      }));
     });
 
     test('debe cambiar estado a OUT_OF_STOCK si se intenta activar un producto digital sin keys en inventario', async () => {

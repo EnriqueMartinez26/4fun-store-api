@@ -14,6 +14,13 @@ const logger = require('../utils/logger');
  */
 const { resolveStrategy } = require('./strategies');
 
+const resolveProductImageUrl = (data = {}) => {
+    const candidate = data.imageUrl ?? data.imageId;
+    if (typeof candidate !== 'string') return undefined;
+    const trimmed = candidate.trim();
+    return trimmed ? trimmed : undefined;
+};
+
 /**
  * Capa de Servicios: Catálogo de Productos (Dominio)
  * --------------------------------------------------------------------------
@@ -315,7 +322,7 @@ class ProductService extends BaseService {
         }
         if (!genreRecord) throw new ErrorResponse(`Género '${genreSlug}' no encontrado`, 400);
 
-        const resolvedImageUrl = imageId ?? imageUrl;
+        const resolvedImageUrl = resolveProductImageUrl({ imageId, imageUrl });
 
         // RN - Ordenamiento default: Los nuevos se ubican al final del stack.
         const firstProduct = await prisma.product.findFirst({ where: { status: 'ACTIVE' }, orderBy: { displayOrder: 'asc' } });
@@ -383,13 +390,12 @@ class ProductService extends BaseService {
         if (!existing) throw new ErrorResponse('Producto no encontrado', 404);
 
         const updateData = {};
+        const resolvedImageUrl = resolveProductImageUrl(data);
         const fields = [
             'name',
             'description',
             'price',
             'developer',
-            'imageId:imageUrl',
-            'imageUrl:imageUrl',
             'trailerUrl',
             'active:isActive',
             'specPreset',
@@ -416,6 +422,7 @@ class ProductService extends BaseService {
         if (data.releaseDate !== undefined) updateData.releaseDate = new Date(data.releaseDate);
         if (data.discountEndDate !== undefined) updateData.discountEndDate = data.discountEndDate ? new Date(data.discountEndDate) : null;
         if (data.type !== undefined) updateData.type = 'DIGITAL';
+        if (resolvedImageUrl !== undefined) updateData.imageUrl = resolvedImageUrl;
 
         const effectiveType = updateData.type || existing.type;
 
