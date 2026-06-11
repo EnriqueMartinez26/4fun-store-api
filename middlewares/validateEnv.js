@@ -38,7 +38,7 @@ const validateEnv = () => {
   }
 
   // Variables no críticas, pero que degradan servicios específicos (Emails / Pagos)
-  const optionalVars = ['BACKEND_URL', 'SMTP_EMAIL', 'SMTP_PASSWORD'];
+  const optionalVars = ['BACKEND_URL', 'SMTP_EMAIL', 'SMTP_PASSWORD', 'ADMIN_EMAIL', 'CONTACT_ADMIN_EMAIL'];
   const missingOptional = optionalVars.filter((v) => !process.env[v]);
   if (missingOptional.length > 0) {
     logger.warn(`⚠️  Variables opcionales no configuradas: ${missingOptional.join(', ')} — algunas funciones (pagos, email) pueden no funcionar.`);
@@ -50,6 +50,10 @@ const validateEnv = () => {
   }
   if (process.env.SMTP_PASSWORD && process.env.SMTP_PASSWORD.length < 10) {
     logger.warn('⚠️  SMTP_PASSWORD parece demasiado corta. Las App Passwords de Gmail tienen 16 caracteres.');
+  }
+
+  if (!process.env.ADMIN_EMAIL && !process.env.CONTACT_ADMIN_EMAIL) {
+    logger.warn('⚠️  No hay destinatario de contacto configurado. Se usará el remitente SMTP como fallback.');
   }
 
   // Validaciones del proveedor MercadoPago (Contexto API Remoto)

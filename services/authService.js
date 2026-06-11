@@ -77,21 +77,19 @@ class AuthService {
         });
 
         let emailSent = false;
-        
-        // Enviar email sin bloquear el registro si falla SMTP
-        const emailPromise = emailService.sendWelcomeEmail({ name, email, verificationToken })
-            .then(result => {
-                emailSent = result.success;
-                if (result.success) logger.info('Email de bienvenida enviado', { email });
-                else logger.warn('Falló envío de email de bienvenida', { email, reason: result.message });
-            })
-            .catch(error => {
-                emailSent = false;
-                logger.error('Excepción al enviar email', { email, error: error.message });
-            });
 
-        // Timeout: máx 4s en envío de email para evitar bloqueo del cliente
-        await Promise.race([emailPromise, new Promise(r => setTimeout(r, 4000))]);
+        // En serverless, un "fire and forget" puede cortarse cuando la función termina.
+        // Esperamos el resultado real del SMTP para no perder correos de activación.
+        try {
+            const result = await emailService.sendWelcomeEmail({ name, email, verificationToken });
+            emailSent = result.success;
+            if (result.success) logger.info('Email de bienvenida enviado', { email });
+            else logger.warn('Falló envío de email de bienvenida', { email, reason: result.message });
+        } catch (error) {
+            emailSent = false;
+            logger.error('Excepción al enviar email', { email, error: error.message });
+        }
+
         return { user: { ...user, _id: user.id }, emailSent };
     }
 

@@ -63,7 +63,18 @@ class EmailService {
     return this._transporter;
   }
 
-  async isAvailable() { return (await this._getTransporter()) !== null; }
+  async isAvailable() {
+    const transporter = await this._getTransporter();
+    if (!transporter) return false;
+
+    try {
+      await transporter.verify();
+      return true;
+    } catch (error) {
+      logger.warn('EmailService: verificación SMTP fallida', { error: error.message });
+      return false;
+    }
+  }
 
   _htmlToText(html) { return html.replace(/<[^>]+>/g, ' ').trim(); }
 
@@ -129,8 +140,9 @@ class EmailService {
    */
   async sendContactNotification({ fullName, email, message }) {
     const template = templates.getContactNotificationEmail(fullName, email, message);
+    const contactRecipient = process.env.CONTACT_ADMIN_EMAIL || process.env.ADMIN_EMAIL || this._fromEmail;
     return this.sendEmail({
-      to: process.env.ADMIN_EMAIL || this._fromEmail,
+      to: contactRecipient,
       subject: template.subject,
       html: template.html
     });
