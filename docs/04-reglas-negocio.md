@@ -8,7 +8,7 @@ El backend de **4Fun Store** restringe las operaciones de base de datos aplicand
 - **Asignación atómica**: Al procesarse el pago de la orden con éxito, el sistema debe de manera transaccional:
   1. Seleccionar la cantidad exacta de claves requeridas.
   2. Asociar esas claves al `Order` de forma permanente.
-  3. Marcar las claves como vendidas (`SOLD`) y actualizar el stock disponible del producto.
+  3. Marcar las claves como vendidas (`SOLD`) y sincronizar el `Product.stock` como caché de disponibilidad.
 
 ## 2. Reglas de Descuentos (Cupones)
 
