@@ -16,9 +16,9 @@
 
 ## Links rápidos
 
-- **API desplegada**: https://4fun-store-api.vercel.app
-- **Verificación de estado (Health check)**: https://4fun-store-api.vercel.app/health
-- **Web desplegada**: https://4fun-store-web.vercel.app
+- **API desplegada**: [https://4fun-store-api.vercel.app](https://4fun-store-api.vercel.app)
+- **Verificación de estado (Health check)**: [https://4fun-store-api.vercel.app/health](https://4fun-store-api.vercel.app/health)
+- **Web desplegada**: [https://4fun-store-web.vercel.app](https://4fun-store-web.vercel.app)
 - **Acta de entrega en Frontend**: [m6-acta-entrega-final.md (en web repo)](https://github.com/EnriqueMartinez26/4fun-store-web/blob/main/docs/m6-acta-entrega-final.md)
 - **Entrega académica final**: `v1.0.0-thesis`
 
@@ -34,9 +34,9 @@ API REST de **4Fun Store**, sistema e-commerce académico orientado a la venta d
 | Versión académica | `v1.0.0-thesis` |
 | Rama final consolidada | `main` |
 | Rama de trazabilidad funcional | `tesis/flujo-principal` |
-| Despliegue API | https://4fun-store-api.vercel.app |
-| Verificación de estado (Health check) | https://4fun-store-api.vercel.app/health |
-| Frontend productivo | https://4fun-store-web.vercel.app |
+| Despliegue API | [https://4fun-store-api.vercel.app](https://4fun-store-api.vercel.app) |
+| Verificación de estado (Health check) | [https://4fun-store-api.vercel.app/health](https://4fun-store-api.vercel.app/health) |
+| Frontend productivo | [https://4fun-store-web.vercel.app](https://4fun-store-web.vercel.app) |
 | Base de datos | Supabase PostgreSQL |
 | Estado de entrega | Cerrado y validado como Hito M6 |
 
@@ -48,17 +48,9 @@ El sistema se enfoca exclusivamente en videojuegos digitales. La entrega del pro
 
 ## Despliegue académico
 
-API publicada:
+API publicada: [https://4fun-store-api.vercel.app](https://4fun-store-api.vercel.app)
 
-```text
-https://4fun-store-api.vercel.app
-```
-
-Verificación de estado (Health check):
-
-```text
-https://4fun-store-api.vercel.app/health
-```
+Verificación de estado (Health check): [https://4fun-store-api.vercel.app/health](https://4fun-store-api.vercel.app/health)
 
 Respuesta esperada:
 
@@ -68,11 +60,7 @@ Respuesta esperada:
 }
 ```
 
-Frontend productivo autorizado por CORS:
-
-```text
-https://4fun-store-web.vercel.app
-```
+Frontend productivo autorizado por CORS: [https://4fun-store-web.vercel.app](https://4fun-store-web.vercel.app)
 
 ## Funcionalidades principales
 
