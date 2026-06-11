@@ -230,15 +230,10 @@ Las pruebas cubren casos críticos del sistema, incluyendo autenticación, órde
 
 La documentación formal de entrega y evidencias visuales se encuentran consolidadas en el repositorio frontend:
 
-```text
-https://github.com/EnriqueMartinez26/4fun-store-web
-```
-
-Documento principal:
-
-```text
-docs/m6-acta-entrega-final.md
-```
+- [Repositorio frontend con acta final y evidencias](https://github.com/EnriqueMartinez26/4fun-store-web)
+- [Acta M6](https://github.com/EnriqueMartinez26/4fun-store-web/blob/main/docs/m6-acta-entrega-final.md)
+- [Evidencias M2](https://github.com/EnriqueMartinez26/4fun-store-web/tree/main/docs/evidencias/m2)
+- [Evidencia M6](https://github.com/EnriqueMartinez26/4fun-store-web/tree/main/docs/evidencias/m6)
 
 ## Limitaciones académicas
 
