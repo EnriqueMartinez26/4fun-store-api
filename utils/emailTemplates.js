@@ -64,7 +64,12 @@ const getWelcomeEmail = (name, verificationToken) => {
     </div>
     <h1 style="font-size: 32px; margin: 0; color: #ffffff; letter-spacing: -1.5px; font-weight: 900; line-height: 1;">¡Tu aventura <br/>comienza ahora!</h1>
     <p style="font-size: 16px; line-height: 1.6; color: rgba(255,255,255,0.8); margin-top: 25px;">
-      Hola <strong>${name}</strong>, bienvenido/a al ecosistema 4Fun.
+      Hola <strong>${name}</strong>, gracias por registrarte en 4Fun Store.
+      Para terminar de crear tu cuenta, confirmá tu correo haciendo clic en el botón de abajo.
+    </p>
+
+    <p style="font-size: 14px; line-height: 1.6; color: rgba(255,255,255,0.6); margin-top: 20px;">
+      Si no solicitaste este registro, podés ignorar este mensaje.
     </p>
   `;
   return {

@@ -289,7 +289,7 @@ class ProductService extends BaseService {
      */
     async createProduct(data) {
         const { name, description, price, platform: platformSlug, genre: genreSlug, platformId, genreId, type,
-            releaseDate, developer, imageId, trailerUrl, stock, active, specPreset,
+            releaseDate, developer, imageId, imageUrl, trailerUrl, stock, active, specPreset,
             requirements, discountPercentage, discountEndDate, sellerId } = data;
 
         // RN - Integridad Taxonómica (3NF): Los campos de clasificación son MANDATORIOS.
@@ -314,6 +314,8 @@ class ProductService extends BaseService {
             genreRecord = await prisma.genre.findFirst({ where: { slug: genreSlug, isActive: true } });
         }
         if (!genreRecord) throw new ErrorResponse(`Género '${genreSlug}' no encontrado`, 400);
+
+        const resolvedImageUrl = imageId ?? imageUrl;
 
         // RN - Ordenamiento default: Los nuevos se ubican al final del stack.
         const firstProduct = await prisma.product.findFirst({ where: { status: 'ACTIVE' }, orderBy: { displayOrder: 'asc' } });
@@ -348,7 +350,7 @@ class ProductService extends BaseService {
                 type: tipo,
                 releaseDate: releaseDate ? new Date(releaseDate) : new Date(),
                 developer,
-                imageUrl: imageId || 'https://placehold.co/600x400?text=Sin+Imagen',
+                imageUrl: resolvedImageUrl || 'https://placehold.co/600x400?text=Sin+Imagen',
                 trailerUrl: trailerUrl || null,
                 stock: tipo === 'DIGITAL' ? 0 : (stock ?? 0),
                 status: active === false ? 'DRAFT' : 'DRAFT', // Por defecto DRAFT hasta validación de stock
@@ -381,7 +383,18 @@ class ProductService extends BaseService {
         if (!existing) throw new ErrorResponse('Producto no encontrado', 404);
 
         const updateData = {};
-        const fields = ['name', 'description', 'price', 'developer', 'imageId:imageUrl', 'trailerUrl', 'active:isActive', 'specPreset', 'discountPercentage:discountPercent'];
+        const fields = [
+            'name',
+            'description',
+            'price',
+            'developer',
+            'imageId:imageUrl',
+            'imageUrl:imageUrl',
+            'trailerUrl',
+            'active:isActive',
+            'specPreset',
+            'discountPercentage:discountPercent'
+        ];
         
         fields.forEach(field => {
             const [src, dest] = field.split(':');

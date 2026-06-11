@@ -188,9 +188,13 @@ Producción:
 NODE_ENV=production
 FRONTEND_URL=https://4fun-store-web.vercel.app
 BACKEND_URL=https://4fun-store-api.vercel.app
+DIRECT_URL=<Supabase PostgreSQL directa>
 DATABASE_URL=<Supabase PostgreSQL>
 JWT_SECRET=<configurado en Vercel>
 DISPUTE_WINDOW_DAYS=0
+SMTP_EMAIL=<cuenta_gmail_o_smtp_emisor>
+SMTP_PASSWORD=<app_password_o_clave_smtp>
+ADMIN_EMAIL=<correo_destino_contacto>
 ```
 
 No deben publicarse credenciales reales, secretos JWT ni URLs privadas de base de datos.

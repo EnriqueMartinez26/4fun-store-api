@@ -151,8 +151,9 @@ exports.createProduct = async (req, res, next) => {
   try {
     // Si hay un archivo subido, usamos esa URL de Cloudinary
     const productData = { ...req.body };
-    if (req.file) {
-      productData.imageUrl = req.file.path;
+    const uploadedImageUrl = req.file?.path || req.body.imageUrl || req.body.imageId;
+    if (uploadedImageUrl) {
+      productData.imageUrl = uploadedImageUrl;
     }
 
     const product = await ProductService.createProduct({
@@ -175,8 +176,9 @@ exports.updateProduct = async (req, res, next) => {
     const productData = { ...req.body };
 
     // Si se subió una nueva imagen, actualizamos la URL
-    if (req.file) {
-      productData.imageUrl = req.file.path;
+    const uploadedImageUrl = req.file?.path || req.body.imageUrl || req.body.imageId;
+    if (uploadedImageUrl) {
+      productData.imageUrl = uploadedImageUrl;
     }
 
     const updatedProduct = await ProductService.updateProduct(id, productData);
