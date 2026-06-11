@@ -8,7 +8,7 @@ Al tratarse de un desarrollo enfocado en el ámbito académico y de tesis, el ba
    - Las órdenes cambian de estado mediante simulación o utilizando el entorno sandbox de MercadoPago. No se efectúan cobros monetarios reales, ni se cuenta con contratos reales de cuentas de vendedor productivas.
 
 2. **Almacenamiento de Claves en Texto Plano**:
-   - Las claves digitales (`DigitalKeys`) se persisten en texto plano en la base de datos PostgreSQL. En un escenario comercial real, este stock de licencias requeriría mecanismos de encriptación asimétrica y control riguroso de accesos de base de datos.
+   - Las claves digitales (`DigitalKey`) se persisten en texto plano en la base de datos PostgreSQL. En un escenario comercial real, este stock de licencias requeriría mecanismos de encriptación asimétrica y control riguroso de accesos de base de datos.
 
 3. **Autenticación sin OAuth**:
    - La autenticación depende puramente del registro interno mediante email y contraseña de la base de datos local. No se integran proveedores de identidad federados externos (como Login con Google, Apple o Steam).

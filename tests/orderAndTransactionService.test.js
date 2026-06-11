@@ -31,6 +31,7 @@ jest.mock('../lib/prisma', () => {
 const OrderService = require('../services/orderService');
 const TransactionService = require('../services/transactionService');
 const prisma = require('../lib/prisma');
+const orderEventBus = require('../services/observers/OrderEventBus');
 
 jest.mock('../services/composite/ProductComponentFactory', () => ({
   create: jest.fn(product => ({
@@ -69,6 +70,7 @@ describe('Order and Transaction Services', () => {
         id: 'prod-1',
         name: 'Game 1',
         type: 'DIGITAL',
+        status: 'ACTIVE',
         price: 10
       });
       prisma.digitalKey.count.mockResolvedValue(0);
@@ -88,6 +90,7 @@ describe('Order and Transaction Services', () => {
         id: 'prod-1',
         name: 'Game 1',
         type: 'DIGITAL',
+        status: 'ACTIVE',
         price: 10
       });
       prisma.digitalKey.count.mockResolvedValue(5);
@@ -108,7 +111,7 @@ describe('Order and Transaction Services', () => {
       expect(prisma.order.create).toHaveBeenCalled();
     });
 
-    test('debe asignar claves y crear transacciones de escrow al pagar la orden', async () => {
+    test('debe marcar la orden como pagada y notificar el evento de pago', async () => {
       prisma.order.findUnique.mockResolvedValue({
         id: 'order-123',
         isPaid: false,
@@ -116,23 +119,29 @@ describe('Order and Transaction Services', () => {
         userId: 'user-1',
         orderItems: [{ productId: 'prod-1', quantity: 1, product: { type: 'DIGITAL', sellerId: 'seller-99' } }]
       });
-      prisma.digitalKey.count.mockResolvedValue(0);
-      prisma.digitalKey.findMany.mockResolvedValue([{ id: 'key-1' }]);
-      prisma.digitalKey.updateMany.mockResolvedValue({ count: 1 });
-      prisma.order.update.mockResolvedValue({});
+      prisma.order.update.mockResolvedValue({
+        id: 'order-123',
+        isPaid: true,
+        totalPrice: 10,
+        userId: 'user-1',
+        orderItems: [{ productId: 'prod-1', quantity: 1, product: { type: 'DIGITAL', sellerId: 'seller-99' } }]
+      });
 
       await OrderService.updateOrderToPaid('order-123');
-      expect(prisma.digitalKey.updateMany).toHaveBeenCalledWith(expect.objectContaining({
-        where: expect.objectContaining({
-          status: 'AVAILABLE',
-          orderId: null
-        }),
+      expect(prisma.order.update).toHaveBeenCalledWith(expect.objectContaining({
+        where: { id: 'order-123' },
         data: expect.objectContaining({
-          status: 'SOLD',
-          orderId: 'order-123'
+          isPaid: true
         })
       }));
-      expect(prisma.transaction.create).toHaveBeenCalled();
+      expect(orderEventBus.notify).toHaveBeenCalledWith(
+        'order:paid',
+        expect.objectContaining({
+          order: expect.objectContaining({ id: 'order-123', isPaid: true }),
+          digitalKeys: [],
+          meta: { shouldSendKeysEmail: false }
+        })
+      );
     });
   });
 

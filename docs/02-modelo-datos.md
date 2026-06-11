@@ -5,30 +5,47 @@ La persistencia de datos está modelada sobre una base de datos relacional **Pos
 ## Entidades Principales
 
 1. **User (Usuario)**:
-   - Contiene credenciales, datos de perfil, estado de verificación de correo y rol asignado (`USER` o `ADMIN`).
-   
-2. **Product (Producto)**:
-   - Representa los videojuegos del catálogo. Incluye campos como título, descripción, precio, estado de publicación y especificaciones mínimas/recomendadas para PC.
+   - Contiene credenciales, datos de perfil, estado de verificación de correo y rol asignado (`BUYER`, `SELLER` o `ADMIN`).
 
-3. **Platform (Plataforma)** y **Genre (Género)**:
-   - Tablas maestras para categorizar de forma organizada los videojuegos.
+2. **SellerProfile (Perfil de vendedor)**:
+   - Extiende a `User` cuando el rol es vendedor y centraliza datos específicos del comercio, como nombre de tienda, cuenta bancaria y aprobación administrativa.
 
-4. **DigitalKey (Clave Digital)**:
-   - Inventario de claves únicas de activación. Cada registro está asociado a un `Product`. Cuando el producto es pagado, esta clave se enlaza a un `OrderItem` y se marca como utilizada.
+3. **Product (Producto)**:
+   - Representa videojuegos digitales del catálogo. Incluye nombre, descripción, precio, tipo, estado de publicación, descuento temporal y clasificación por plataforma y género.
 
-5. **Cart (Carrito)** y **CartItem (Ítem del Carrito)**:
-   - Almacena de forma persistente los productos que un usuario ha seleccionado temporalmente antes de iniciar una orden de compra.
+4. **Platform (Plataforma)** y **Genre (Género)**:
+   - Tablas maestras para categorizar de forma organizada los productos.
 
-6. **Order (Orden)** y **OrderItem (Ítem de la Orden)**:
-   - Registra el encabezado y el detalle de una compra. Almacena montos, estado (`PENDING`, `COMPLETED`, `CANCELLED`) y el cupón aplicado.
+5. **ProductRequirement (Requerimiento técnico)**:
+   - Normaliza los requisitos mínimos o recomendados de cada producto sin usar JSON embebido.
 
-7. **Coupon (Cupón)**:
-   - Cupones de descuento aplicables a las órdenes. Almacenan porcentaje de descuento, fecha de expiración y límites de uso.
+6. **DigitalKey (Clave digital)**:
+   - Inventario de licencias únicas asociadas a un `Product`. El stock disponible se calcula sobre las claves con estado `AVAILABLE`; cuando una compra se confirma y se asignan claves, pasan a `SOLD` y quedan vinculadas a la orden.
 
-8. **Review (Reseña)**:
-   - Calificación (estrellas) y comentario textual que un usuario realiza sobre un producto adquirido.
+7. **Cart (Carrito)** y **CartItem (Ítem del carrito)**:
+   - Almacenan de forma persistente los productos que un usuario selecciona antes de iniciar una orden de compra.
+
+8. **Order (Orden)** y **OrderItem (Ítem de la orden)**:
+   - Registran el encabezado y el detalle de la compra. `Order.status` modela el ciclo logístico (`PENDING`, `PROCESSING`, `SHIPPED`, `DELIVERED`, `CANCELLED`) y no reemplaza el estado financiero, que se guarda en `isPaid`, `paidAt` y `Transaction`.
+
+9. **ShippingAddress (Dirección de envío)** y **Payment (Pago)**:
+   - Normalizan los datos de envío y la información de la pasarela de pago para evitar duplicación en `Order`.
+
+10. **Transaction (Escrow)**:
+   - Representa la custodia de fondos asociada a una orden pagada. Su estado es independiente del estado logístico de la orden y se gestiona con `PENDING_APPROVAL`, `FUNDS_RELEASED`, `REJECTED` o `CANCELLED`.
+
+11. **Coupon (Cupón)**:
+   - Cupones de descuento con código único, vigencia, límite de uso y valor de descuento.
+
+12. **Review (Reseña)** y **ReviewHelpfulVote (Voto útil)**:
+   - Reseñas de productos y votos de utilidad normalizados en tablas separadas.
+
+13. **Wishlist (Lista de deseos)** y **WishlistItem (Ítem de lista)**:
+   - Persisten la relación entre usuarios y productos guardados para seguimiento posterior.
 
 ## Relaciones Críticas
 
-- **Relación de Stock (1 a N)**: Un `Product` tiene muchas `DigitalKeys`. El stock disponible en tiempo real se calcula contando las claves asociadas que no han sido vendidas/usadas.
-- **Relación de Compra (N a M)**: Un `User` puede generar muchas `Orders`, las cuales contienen múltiples `OrderItems` enlazados a `Products`.
+- **Relación de stock (1 a N)**: Un `Product` tiene muchas `DigitalKey`. El stock real se calcula sobre las claves activas con estado `AVAILABLE`.
+- **Relación de compra (1 a N)**: Un `User` puede generar muchas `Order`, cada una con múltiples `OrderItem` enlazados a `Product`.
+- **Separación financiera**: El estado del pedido, el pago y la custodia no se mezclan en un solo campo. `Order.status`, `Order.isPaid` y `Transaction.status` resuelven problemas distintos.
+- **Relación vendedor-producto**: Cada `Product` pertenece a un vendedor; si el usuario tiene rol `SELLER`, puede estar asociado además a un `SellerProfile`.

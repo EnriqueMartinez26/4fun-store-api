@@ -4,22 +4,23 @@ El backend de **4Fun Store** restringe las operaciones de base de datos aplicand
 
 ## 1. Reglas Relativas al Stock Digital
 
-- **Validación Preventiva de Stock**: No se permite añadir al carrito ni generar una orden de compra para un videojuego si el número de claves libres (`DigitalKeys` no usadas ni reservadas) es menor a la cantidad solicitada.
-- **Asignación Atómica**: Al procesarse el pago de la orden con éxito, el sistema debe de manera transaccional:
+- **Validación preventiva de stock**: No se permite añadir al carrito ni generar una orden de compra para un videojuego si el número de claves libres (`DigitalKey` activas con estado `AVAILABLE`) es menor a la cantidad solicitada.
+- **Asignación atómica**: Al procesarse el pago de la orden con éxito, el sistema debe de manera transaccional:
   1. Seleccionar la cantidad exacta de claves requeridas.
-  2. Asociar esas claves al `OrderItem` de la orden de forma permanente.
-  3. Marcar las claves como usadas (`isUsed = true`), retirándolas definitivamente del inventario disponible.
+  2. Asociar esas claves al `Order` de forma permanente.
+  3. Marcar las claves como vendidas (`SOLD`) y actualizar el stock disponible del producto.
 
 ## 2. Reglas de Descuentos (Cupones)
 
-- **Cupón Exclusivo**: Solo se permite aplicar un único cupón de descuento por cada orden generada (no acumulables).
-- **Vigencia Temporal**: Para aplicar un cupón se valida que la fecha del servidor sea menor o igual a la fecha de expiración del cupón.
-- **Límite de Uso**: Cada cupón dispone de una cantidad máxima de usos global; una vez alcanzada, el backend rechazará cualquier intento de validación posterior.
+- **Cupón exclusivo**: El checkout valida un único cupón por operación; si pasa las validaciones, el backend incrementa su `usedCount` y conserva el registro del cupón de forma independiente al pedido.
+- **Vigencia temporal**: Para validar un cupón se comprueba que la fecha del servidor sea menor o igual a la fecha de expiración del cupón.
+- **Límite de uso**: Cada cupón dispone de una cantidad máxima de usos global; una vez alcanzada, el backend rechaza cualquier intento de validación posterior.
 
 ## 3. Reglas de Reseñas
 
-- **Compra Obligatoria**: Un usuario solo puede registrar una reseña y calificación para un videojuego si cuenta con al menos una orden asociada en estado `COMPLETED` que contenga dicho videojuego.
+- **Compra obligatoria**: Un usuario solo puede registrar una reseña y calificación para un videojuego si cuenta con al menos una orden pagada (`isPaid = true`) que contenga dicho videojuego y las claves ya hayan sido asignadas.
 
 ## 4. Reglas de Aprobación de Órdenes
 
-- **Restricción de Rol para Aprobación**: Los cambios de estado de las órdenes de compra a `COMPLETED` manuales solo pueden realizarse por usuarios autenticados con rol `ADMIN`.
+- **Restricción de rol para administración**: Los cambios de estado logístico de las órdenes (`PROCESSING`, `SHIPPED`, `DELIVERED`, `CANCELLED`) solo pueden realizarse por usuarios autenticados con rol `ADMIN`.
+- **Separación financiera**: El estado del pedido no reemplaza el estado del pago. `Order.status` describe el ciclo logístico, mientras que `isPaid` y `Transaction.status` describen el circuito financiero y de custodia.
