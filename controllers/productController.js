@@ -149,11 +149,8 @@ exports.getProductManagement = async (req, res, next) => {
  */
 exports.createProduct = async (req, res, next) => {
   try {
-    // Si hay un archivo subido, usamos esa URL de Cloudinary
     const productData = { ...req.body };
-    if (req.file) {
-      productData.imageUrl = req.file.path;
-    }
+    if (req.file?.path) productData.imageUrl = req.file.path;
 
     const product = await ProductService.createProduct({
       ...productData,
@@ -174,10 +171,7 @@ exports.updateProduct = async (req, res, next) => {
     const { id } = req.params;
     const productData = { ...req.body };
 
-    // Si se subió una nueva imagen, actualizamos la URL
-    if (req.file) {
-      productData.imageUrl = req.file.path;
-    }
+    if (req.file?.path) productData.imageUrl = req.file.path;
 
     const updatedProduct = await ProductService.updateProduct(id, productData);
     res.status(200).json({ success: true, data: updatedProduct });

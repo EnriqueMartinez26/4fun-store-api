@@ -4,7 +4,7 @@
  * Define el **contrato** (firma) que todas las estrategias de cálculo de
  * precios deben implementar. Esta clase actúa como la "deferred class" del
  * catálogo OOSC2 §16.3: declara la operación sin proveer implementación
- * inicial, permitiendo que las subclases concretas (Physical/Digital) sean
+ * inicial, permitiendo que las subclases concretas de producto digital sean
  * intercambiables desde el punto de vista del contexto.
  *
  * Consecuencia GoF §Strategy — Beneficio de EXTENSIBILIDAD:
@@ -38,7 +38,7 @@ class PricingStrategy {
     /**
      * Calcula el stock visible para el cliente según el tipo de producto.
      * Método abstracto: la fuente de verdad del stock varía por tipología
-     * (campo numérico para Físico vs. conteo de Keys para Digital).
+     * (conteo de Keys para producto digital).
      *
      * @param {object} p - Entidad cruda de Prisma (producto).
      * @returns {number} Stock disponible calculado.

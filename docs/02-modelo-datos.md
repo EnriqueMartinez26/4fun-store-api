@@ -20,7 +20,7 @@ La persistencia de datos está modelada sobre una base de datos relacional **Pos
    - Normaliza los requisitos mínimos o recomendados de cada producto sin usar JSON embebido.
 
 6. **DigitalKey (Clave digital)**:
-   - Inventario de licencias únicas asociadas a un `Product`. El stock disponible se calcula sobre las claves con estado `AVAILABLE`; cuando una compra se confirma y se asignan claves, pasan a `SOLD` y quedan vinculadas a la orden.
+   - Inventario de licencias únicas asociadas a un `Product`. El stock operativo se controla con las claves en estado `AVAILABLE` y se sincroniza en el campo `Product.stock` como caché de disponibilidad; cuando una compra se confirma y se asignan claves, pasan a `SOLD` y quedan vinculadas a la orden.
 
 7. **Cart (Carrito)** y **CartItem (Ítem del carrito)**:
    - Almacenan de forma persistente los productos que un usuario selecciona antes de iniciar una orden de compra.
@@ -45,7 +45,7 @@ La persistencia de datos está modelada sobre una base de datos relacional **Pos
 
 ## Relaciones Críticas
 
-- **Relación de stock (1 a N)**: Un `Product` tiene muchas `DigitalKey`. El stock real se calcula sobre las claves activas con estado `AVAILABLE`.
+- **Relación de stock (1 a N)**: Un `Product` tiene muchas `DigitalKey`. El stock operativo se deriva de las claves activas con estado `AVAILABLE` y se refleja en `Product.stock` para consultas rápidas.
 - **Relación de compra (1 a N)**: Un `User` puede generar muchas `Order`, cada una con múltiples `OrderItem` enlazados a `Product`.
 - **Separación financiera**: El estado del pedido, el pago y la custodia no se mezclan en un solo campo. `Order.status`, `Order.isPaid` y `Transaction.status` resuelven problemas distintos.
 - **Relación vendedor-producto**: Cada `Product` pertenece a un vendedor; si el usuario tiene rol `SELLER`, puede estar asociado además a un `SellerProfile`.

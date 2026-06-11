@@ -51,7 +51,7 @@ class OrderService {
                 throw new ErrorResponse(`Este producto ya no está disponible: ${product.name}`, 400);
             }
 
-            // RN de Disponibilidad por Tipología (Físico vs Digital)
+            // RN de Disponibilidad por Tipología: el schema actual solo admite digital.
             if (product.type === 'DIGITAL') {
                 const availableKeys = await prisma.digitalKey.count({
                     where: { productId: item.product, status: 'AVAILABLE' }
@@ -59,8 +59,6 @@ class OrderService {
                 if (availableKeys < item.quantity) {
                     throw new ErrorResponse(`Stock insuficiente de keys para: ${product.name} (Disponibles: ${availableKeys})`, 400);
                 }
-            } else {
-                if (product.stock < item.quantity) throw new ErrorResponse(`Stock insuficiente para: ${product.name}`, 400);
             }
 
             const component = ProductComponentFactory.create(product);
@@ -82,21 +80,7 @@ class OrderService {
         // RN (Regla de Atomicidad): Usamos $transaction para que la creación del pedido
         // y la reserva de stock sean una sola operación indivisible.
         const order = await prisma.$transaction(async (tx) => {
-            // 1. Reservar stock para productos físicos
-            for (const item of validatedItems) {
-                if (item.type !== 'DIGITAL') {
-                    const updated = await tx.product.updateMany({
-                        where: { id: item.id, stock: { gte: item.quantity } },
-                        data: { stock: { decrement: item.quantity } }
-                    });
-                    
-                    if (updated.count === 0) {
-                        throw new ErrorResponse(`Stock agotado para: ${item.title}.`, 409);
-                    }
-                }
-            }
-
-            // 2. Crear la orden y sus items
+            // 1. Crear la orden y sus items
             return await tx.order.create({
                 data: {
                     userId: user.id || user._id?.toString() || user,

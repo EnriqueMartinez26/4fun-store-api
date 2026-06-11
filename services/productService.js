@@ -8,11 +8,18 @@ const logger = require('../utils/logger');
  * --------------------------------------------------------------------------
  * Importamos el registro central de estrategias. `resolveStrategy` es la
  * función de despacho que, dado el campo `tipo` del modelo Prisma,
- * retorna la instancia de ConcreteStrategy correspondiente (Physical/Digital).
+ * retorna la instancia de ConcreteStrategy correspondiente.
  * GoF §Strategy — Consecuencia: elimina los condicionales dispersos en el
  * contexto y los encapsula en clases intercambiables.
  */
 const { resolveStrategy } = require('./strategies');
+
+const resolveProductImageUrl = (data = {}) => {
+    const candidate = data.imageUrl ?? data.imageId;
+    if (typeof candidate !== 'string') return undefined;
+    const trimmed = candidate.trim();
+    return trimmed ? trimmed : undefined;
+};
 
 /**
  * Capa de Servicios: Catálogo de Productos (Dominio)
@@ -20,8 +27,8 @@ const { resolveStrategy } = require('./strategies');
  * Orquesta la lógica fundamental de la mercadería. Implementa patrones de
  * Herencia y Polimorfismo al especializar `BaseService`.
  * 
- * Gestiona tanto productos físicos como digitales, aplicando Reglas de Negocio
- * diferenciadas para el control de inventario (Stock vs Keys). (MVC)
+ * Gestiona productos digitales, aplicando Reglas de Negocio
+ * diferenciadas para el control de inventario por keys. (MVC)
  */
 
 const PRODUCT_INCLUDE = {
@@ -131,7 +138,7 @@ class ProductService extends BaseService {
                 imageId: p.genre.imageUrl,
                 active: p.genre.isActive
             } : { id: p.genreId, name: 'Sin clasificar', active: false },
-            type: p.type === 'PHYSICAL' ? 'Physical' : 'Digital',
+            type: 'Digital',
             releaseDate: p.releaseDate,
             developer: p.developer,
             imageId: p.imageUrl || 'https://placehold.co/600x400?text=Sin+Imagen',
@@ -289,7 +296,7 @@ class ProductService extends BaseService {
      */
     async createProduct(data) {
         const { name, description, price, platform: platformSlug, genre: genreSlug, platformId, genreId, type,
-            releaseDate, developer, imageId, trailerUrl, stock, active, specPreset,
+            releaseDate, developer, imageId, imageUrl, trailerUrl, stock, active, specPreset,
             requirements, discountPercentage, discountEndDate, sellerId } = data;
 
         // RN - Integridad Taxonómica (3NF): Los campos de clasificación son MANDATORIOS.
@@ -315,11 +322,13 @@ class ProductService extends BaseService {
         }
         if (!genreRecord) throw new ErrorResponse(`Género '${genreSlug}' no encontrado`, 400);
 
+        const resolvedImageUrl = resolveProductImageUrl({ imageId, imageUrl });
+
         // RN - Ordenamiento default: Los nuevos se ubican al final del stack.
         const firstProduct = await prisma.product.findFirst({ where: { status: 'ACTIVE' }, orderBy: { displayOrder: 'asc' } });
         const newOrder = firstProduct ? firstProduct.displayOrder - 1000 : 0;
 
-        // RN - Solo Digital: Todos los productos son digitales en esta plataforma.
+        // RN - Solo Digital: El schema solo admite productos digitales.
         const tipo = 'DIGITAL';
 
         // Normalización de Requisitos de Hardware para persistencia relación M2M/12 Muitos.
@@ -348,7 +357,7 @@ class ProductService extends BaseService {
                 type: tipo,
                 releaseDate: releaseDate ? new Date(releaseDate) : new Date(),
                 developer,
-                imageUrl: imageId || 'https://placehold.co/600x400?text=Sin+Imagen',
+                imageUrl: resolvedImageUrl || 'https://placehold.co/600x400?text=Sin+Imagen',
                 trailerUrl: trailerUrl || null,
                 stock: tipo === 'DIGITAL' ? 0 : (stock ?? 0),
                 status: active === false ? 'DRAFT' : 'DRAFT', // Por defecto DRAFT hasta validación de stock
@@ -381,7 +390,17 @@ class ProductService extends BaseService {
         if (!existing) throw new ErrorResponse('Producto no encontrado', 404);
 
         const updateData = {};
-        const fields = ['name', 'description', 'price', 'developer', 'imageId:imageUrl', 'trailerUrl', 'active:isActive', 'specPreset', 'discountPercentage:discountPercent'];
+        const resolvedImageUrl = resolveProductImageUrl(data);
+        const fields = [
+            'name',
+            'description',
+            'price',
+            'developer',
+            'trailerUrl',
+            'active:isActive',
+            'specPreset',
+            'discountPercentage:discountPercent'
+        ];
         
         fields.forEach(field => {
             const [src, dest] = field.split(':');
@@ -403,8 +422,7 @@ class ProductService extends BaseService {
         if (data.releaseDate !== undefined) updateData.releaseDate = new Date(data.releaseDate);
         if (data.discountEndDate !== undefined) updateData.discountEndDate = data.discountEndDate ? new Date(data.discountEndDate) : null;
         if (data.type !== undefined) updateData.type = 'DIGITAL';
-
-        const effectiveType = updateData.type || existing.type;
+        if (resolvedImageUrl !== undefined) updateData.imageUrl = resolvedImageUrl;
 
         if (data.platformId !== undefined) {
             const p = await prisma.platform.findFirst({ where: { id: data.platformId, isActive: true } });
@@ -422,18 +440,12 @@ class ProductService extends BaseService {
             if (g) updateData.genreId = g.id;
         }
 
-        if (data.stock !== undefined && effectiveType !== 'DIGITAL') {
-            updateData.stock = Number(data.stock);
-        }
-
-        // RN - Integridad de Inventario Digital: El stock de productos digitales
-        // siempre se deriva del conteo de keys disponibles.
-        if (effectiveType === 'DIGITAL') {
-            const digitalStock = await prisma.digitalKey.count({
-                where: { productId: id, status: 'AVAILABLE' }
-            });
-            updateData.stock = digitalStock;
-        }
+        // RN - Integridad de Inventario Digital: El stock siempre se deriva del conteo
+        // de keys disponibles, ya que no hay una rama física en este schema.
+        const digitalStock = await prisma.digitalKey.count({
+            where: { productId: id, status: 'AVAILABLE' }
+        });
+        updateData.stock = digitalStock;
 
         // RN - Suspensión de Venta: No puede ser ACTIVE si stock == 0.
         const finalStatus = updateData.status || existing.status;
