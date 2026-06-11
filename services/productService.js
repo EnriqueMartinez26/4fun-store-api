@@ -8,7 +8,7 @@ const logger = require('../utils/logger');
  * --------------------------------------------------------------------------
  * Importamos el registro central de estrategias. `resolveStrategy` es la
  * función de despacho que, dado el campo `tipo` del modelo Prisma,
- * retorna la instancia de ConcreteStrategy correspondiente (Physical/Digital).
+ * retorna la instancia de ConcreteStrategy correspondiente.
  * GoF §Strategy — Consecuencia: elimina los condicionales dispersos en el
  * contexto y los encapsula en clases intercambiables.
  */
@@ -27,8 +27,8 @@ const resolveProductImageUrl = (data = {}) => {
  * Orquesta la lógica fundamental de la mercadería. Implementa patrones de
  * Herencia y Polimorfismo al especializar `BaseService`.
  * 
- * Gestiona tanto productos físicos como digitales, aplicando Reglas de Negocio
- * diferenciadas para el control de inventario (Stock vs Keys). (MVC)
+ * Gestiona productos digitales, aplicando Reglas de Negocio
+ * diferenciadas para el control de inventario por keys. (MVC)
  */
 
 const PRODUCT_INCLUDE = {
@@ -138,7 +138,7 @@ class ProductService extends BaseService {
                 imageId: p.genre.imageUrl,
                 active: p.genre.isActive
             } : { id: p.genreId, name: 'Sin clasificar', active: false },
-            type: p.type === 'PHYSICAL' ? 'Physical' : 'Digital',
+            type: 'Digital',
             releaseDate: p.releaseDate,
             developer: p.developer,
             imageId: p.imageUrl || 'https://placehold.co/600x400?text=Sin+Imagen',
@@ -328,7 +328,7 @@ class ProductService extends BaseService {
         const firstProduct = await prisma.product.findFirst({ where: { status: 'ACTIVE' }, orderBy: { displayOrder: 'asc' } });
         const newOrder = firstProduct ? firstProduct.displayOrder - 1000 : 0;
 
-        // RN - Solo Digital: Todos los productos son digitales en esta plataforma.
+        // RN - Solo Digital: El schema solo admite productos digitales.
         const tipo = 'DIGITAL';
 
         // Normalización de Requisitos de Hardware para persistencia relación M2M/12 Muitos.
@@ -424,8 +424,6 @@ class ProductService extends BaseService {
         if (data.type !== undefined) updateData.type = 'DIGITAL';
         if (resolvedImageUrl !== undefined) updateData.imageUrl = resolvedImageUrl;
 
-        const effectiveType = updateData.type || existing.type;
-
         if (data.platformId !== undefined) {
             const p = await prisma.platform.findFirst({ where: { id: data.platformId, isActive: true } });
             if (p) updateData.platformId = p.id;
@@ -442,18 +440,12 @@ class ProductService extends BaseService {
             if (g) updateData.genreId = g.id;
         }
 
-        if (data.stock !== undefined && effectiveType !== 'DIGITAL') {
-            updateData.stock = Number(data.stock);
-        }
-
-        // RN - Integridad de Inventario Digital: El stock de productos digitales
-        // siempre se deriva del conteo de keys disponibles.
-        if (effectiveType === 'DIGITAL') {
-            const digitalStock = await prisma.digitalKey.count({
-                where: { productId: id, status: 'AVAILABLE' }
-            });
-            updateData.stock = digitalStock;
-        }
+        // RN - Integridad de Inventario Digital: El stock siempre se deriva del conteo
+        // de keys disponibles, ya que no hay una rama física en este schema.
+        const digitalStock = await prisma.digitalKey.count({
+            where: { productId: id, status: 'AVAILABLE' }
+        });
+        updateData.stock = digitalStock;
 
         // RN - Suspensión de Venta: No puede ser ACTIVE si stock == 0.
         const finalStatus = updateData.status || existing.status;
