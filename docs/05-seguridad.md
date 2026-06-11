@@ -24,7 +24,7 @@ Se implementaron múltiples medidas y tecnologías transversales para resguardar
    - Uso obligatorio de las API tipadas de Prisma ORM, que parametrizan y sanean las consultas SQL de forma nativa.
 
 6. **Sanitización de Datos y Parámetros**:
-   - Uso de `express-validator` para forzar esquemas y sanean cuerpos de peticiones en las rutas.
+   - Uso de `middlewares/authValidator.js` con `express-validator` para forzar esquemas y sanear cuerpos de peticiones en las rutas.
    - Uso de middleware `hpp` para prevenir ataques de contaminación de parámetros HTTP (Parameter Pollution).
 
 7. **Aislamiento de Herramientas de Diagnóstico**:

@@ -14,7 +14,8 @@ Request → [Routes] → [Middlewares] → [Controllers] → [Services] → [Pri
 
 2. **Middlewares (Interceptores)**:
    - Manejan tareas transversales (cross-cutting concerns) como:
-     - Autenticación y validación de tokens JWT (`auth.middleware.ts`).
+     - Autenticación y validación de tokens JWT (`middlewares/auth.js`).
+     - Validación de esquemas de entrada para auth (`middlewares/authValidator.js`).
      - Control de permisos basados en roles.
      - Validaciones sintácticas de entrada de datos (`express-validator`).
      - Manejo centralizado de errores y excepciones del sistema.
