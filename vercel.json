@@ -6,6 +6,9 @@
       "use": "@vercel/node"
     }
   ],
+  "github": {
+    "silent": true
+  },
   "routes": [
     {
       "src": "/(.*)",
