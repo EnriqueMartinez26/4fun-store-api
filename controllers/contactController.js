@@ -21,15 +21,6 @@ exports.sendMessage = async (req, res, next) => {
   try {
     const { firstName, lastName, email, message } = req.body;
 
-    // Manejo de Excepciones de Entrada: Chequeo defensivo básico antes de procesar 
-    // reglas pesadas.
-    if (!firstName || !email || !message) {
-      return res.status(400).json({
-        success: false,
-        message: 'Los campos nombre, email y mensaje son requeridos.'
-      });
-    }
-
     const fullName = [firstName, lastName].filter(Boolean).join(' ');
 
     // Regla de Negocio (Tolerancia a fallos): Verifica estado de conectividad SMTP

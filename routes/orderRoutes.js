@@ -11,6 +11,13 @@ const {
   createEscrowTransaction
 } = require('../controllers/orderController');
 const { protect, authorize, ensureVerified } = require('../middlewares/auth');
+const {
+  createOrderValidation,
+  orderIdValidation,
+  orderListQueryValidation,
+  userOrderQueryValidation,
+  updateOrderStatusValidation
+} = require('../middlewares/orderValidator');
 
 /**
  * Capa de Enrutamiento: Ciclo de Vida de Órdenes y Pagos (Orders)
@@ -22,30 +29,30 @@ const { protect, authorize, ensureVerified } = require('../middlewares/auth');
 // ─── RUTAS DE USUARIO (PROTEGIDAS) ───
 
 /** @route POST /api/orders - Iniciación de compra y reserva de stock. */
-router.post('/', protect, ensureVerified, createOrder);
+router.post('/', protect, ensureVerified, createOrderValidation, createOrder);
 
 /** @route GET /api/orders/my-orders - Historial de adquisiciones del usuario en sesión. */
-router.get('/my-orders', protect, getUserOrders);
+router.get('/my-orders', protect, userOrderQueryValidation, getUserOrders);
 
 /** @route GET /api/orders/:id - Detalle extendido de una orden específica (incluye claves si aplica). */
-router.get('/:id', protect, getOrder);
+router.get('/:id', protect, orderIdValidation, getOrder);
 
 
 // ─── GESTIÓN ADMINISTRATIVA (RESTRICTED) ───
 
 /** @route GET /api/orders - Panel de control masivo de transacciones. */
-router.get('/', protect, authorize('ADMIN'), getAllOrders);
+router.get('/', protect, authorize('ADMIN'), orderListQueryValidation, getAllOrders);
 
 /** @route PUT /api/orders/:id/pay - Forzado manual de estado 'Pagado' (Auditoría). */
-router.put('/:id/pay', protect, authorize('ADMIN'), updateOrderToPaid);
+router.put('/:id/pay', protect, authorize('ADMIN'), orderIdValidation, updateOrderToPaid);
 
 /** @route POST /api/orders/:id/assign-keys - Asignación manual de llaves digitales. */
-router.post('/:id/assign-keys', protect, authorize('ADMIN'), assignKeysToOrder);
+router.post('/:id/assign-keys', protect, authorize('ADMIN'), orderIdValidation, assignKeysToOrder);
 
 /** @route POST /api/orders/:id/escrow - Creación manual de la transacción escrow. */
-router.post('/:id/escrow', protect, authorize('ADMIN'), createEscrowTransaction);
+router.post('/:id/escrow', protect, authorize('ADMIN'), orderIdValidation, createEscrowTransaction);
 
 /** @route PATCH /api/orders/:id/status - Mutación de estados logísticos (Processing/Delivered). */
-router.patch('/:id/status', protect, authorize('ADMIN'), updateOrderStatus);
+router.patch('/:id/status', protect, authorize('ADMIN'), updateOrderStatusValidation, updateOrderStatus);
 
 module.exports = router;

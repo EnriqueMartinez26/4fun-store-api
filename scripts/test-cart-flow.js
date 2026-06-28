@@ -17,9 +17,9 @@ const PRODUCT_NAMES = {
 
 const CART_ENDPOINTS = {
   get: '/api/cart',
-  add: '/api/cart/items',
-  update: (cartItemId) => `/api/cart/items/${cartItemId}`,
-  remove: (cartItemId) => `/api/cart/items/${cartItemId}`,
+  add: '/api/cart',
+  update: (cartItemId) => `/api/cart/${cartItemId}`,
+  remove: (cartItemId) => `/api/cart/${cartItemId}`,
   clear: '/api/cart',
 };
 

@@ -7,8 +7,6 @@
  */
 
 const ProductService = require('../services/productService');
-const ErrorResponse = require('../utils/errorResponse');
-const parseBulkIds = require('../utils/parseBulkIds');
 
 /**
  * Búsqueda inteligente multipropósito (Catálogo y Panel Admin).
@@ -116,21 +114,6 @@ exports.getProduct = async (req, res, next) => {
 };
 
 /**
- * Detalle administrativo de producto.
- * Permite recuperar productos inactivos para su gestion interna.
- * RN (RBAC): El contexto `includeInactive=true` solo se utiliza en rutas
- * protegidas por middleware de rol administrador.
- */
-exports.getProductAdmin = async (req, res, next) => {
-  try {
-    const product = await ProductService.getProductById(req.params.id, { includeInactive: true });
-    res.status(200).json({ success: true, data: product });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
  * Detalle de gestión de producto.
  * Utilizado por vendedores para editar sus propios productos (incluye inactivos/borradores).
  */
@@ -181,32 +164,6 @@ exports.updateProduct = async (req, res, next) => {
 };
 
 /**
- * Operación analítica para organizar catálogos curados frontalizables 
- * (Modificación de la columna sortOrder en DB).
- */
-exports.reorderProduct = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { newPosition } = req.body;
-
-    // Manejo Errores HTTP Interno: Protege al servicio exigiendo parseo duro en input numérico.
-    if (newPosition === undefined || typeof newPosition !== 'number') {
-      throw new ErrorResponse('Posición inválida, se requiere un número', 400);
-    }
-
-    const success = await ProductService.reorderProduct(id, newPosition);
-
-    if (!success) {
-      return res.status(400).json({ success: false, message: 'No se pudo mover el producto' });
-    }
-
-    res.status(200).json({ success: true, message: 'Producto reordenado' });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
  * Limpieza Singular Logística. Evita mostrar productos desfazados de mercado.
  * Nota: La validación de propiedad se realiza en `verifyProductOwnership` middleware.
  */
@@ -220,41 +177,3 @@ exports.deleteProduct = async (req, res, next) => {
   }
 };
 
-/**
- * Desindexación perimetral por IDs listados vía frontend.
- */
-exports.deleteProducts = async (req, res, next) => {
-  try {
-    const ids = parseBulkIds(req);
-
-    // Validación preventiva arquitectónica para abortar sentencias SQL vacías inútiles.
-    if (!ids || ids.length === 0) {
-      throw new ErrorResponse('No se proporcionaron IDs para eliminar', 400);
-    }
-
-    // RN - Seguridad Marketplace: Validar que sellers solo eliminen sus productos
-    const validation = await ProductService.validateProductOwnershipBulk(
-      ids, 
-      req.user.id, 
-      req.user.role
-    );
-
-    if (!validation.valid) {
-      return res.status(403).json({ 
-        success: false, 
-        message: validation.message,
-        unauthorizedIds: validation.unauthorizedIds
-      });
-    }
-
-    const result = await ProductService.deleteProducts(ids);
-
-    res.status(200).json({
-      success: true,
-      message: `${result.count} productos eliminados`,
-      ids
-    });
-  } catch (error) {
-    next(error);
-  }
-};

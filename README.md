@@ -32,13 +32,21 @@ API REST de **4Fun Store**, sistema e-commerce académico orientado a la venta d
 | Item | Estado |
 | :--- | :--- |
 | Versión académica | `v1.0.0-thesis` |
-| Rama final consolidada | `main` |
-| Rama de trazabilidad funcional | `tesis/flujo-principal` |
+| Rama principal consolidada | `main` |
+| Ramas de trabajo conservadas | `nano`, `kuki` |
 | Despliegue API | [https://4fun-store-api.vercel.app](https://4fun-store-api.vercel.app) |
 | Verificación de estado (Health check) | [https://4fun-store-api.vercel.app/health](https://4fun-store-api.vercel.app/health) |
 | Frontend productivo | [https://4fun-store-web.vercel.app](https://4fun-store-web.vercel.app) |
 | Base de datos | Supabase PostgreSQL |
 | Estado de entrega | Cerrado y validado como Hito M6 |
+
+## Estado técnico actual
+
+- Esquema relacional consolidado en **3FN estricta**.
+- El stock operativo se deriva de `DigitalKey` disponibles; no se persiste un stock manual en `Product`.
+- El total de la orden se calcula desde `OrderItem` + `shippingPrice`; no se persiste un total redundante.
+- El subsistema de cupones fue eliminado por completo.
+- El seed actual limpia la base y la reconstruye con datos realistas de prueba.
 
 ## Alcance
 
@@ -111,7 +119,7 @@ Request
 * Supabase
 * Prisma ORM
 * JWT
-* bcrypt
+* bcryptjs
 * Helmet
 * CORS
 * express-rate-limit
@@ -131,17 +139,21 @@ Entidades principales:
 * CartItem
 * Order
 * OrderItem
+* ShippingAddress
+* Payment
 * DigitalKey
 * Transaction
-* Coupon
 * Review
+* ReviewHelpfulVote
+* Wishlist
+* WishlistItem
 
 ## Flujo principal validado
 
 ```text
 registro/login
   -> catálogo digital
-  -> carrito con stock por claves digitales
+  -> carrito con disponibilidad por claves digitales
   -> checkout y generación de orden
   -> pago simulado/admin
   -> asignación de claves digitales
@@ -230,6 +242,7 @@ La documentación formal de entrega y evidencias visuales se encuentran consolid
 * Mercado Pago se representa como flujo simulado o administrativo.
 * La aprobación de transacciones representa una regla administrativa interna, no una transferencia bancaria real.
 * El sistema se enfoca únicamente en productos digitales.
+* No existe un subsistema de cupones/promociones en esta versión.
 * Las credenciales reales deben gestionarse fuera del repositorio.
 
 ## Mejoras futuras

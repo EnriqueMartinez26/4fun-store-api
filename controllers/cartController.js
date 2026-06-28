@@ -66,9 +66,8 @@ exports.addToCart = async (req, res, next) => {
  */
 exports.updateCartItem = async (req, res, next) => {
   try {
-    const { itemId: bodyItemId, quantity } = req.body;
-    const { itemId: paramsItemId } = req.params;
-    const itemId = paramsItemId || bodyItemId;
+    const { quantity } = req.body;
+    const { itemId } = req.params;
     const userId = req.user.id;
     
     const populatedCart = await CartService.updateCartItem(userId, itemId, quantity);

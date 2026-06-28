@@ -21,15 +21,53 @@
 const prisma          = require('../lib/prisma');
 const orderEventBus   = require('./observers/OrderEventBus');
 const ProductComponentFactory = require('./composite/ProductComponentFactory');
+const { attachOrderTotal, calculateOrderTotal } = require('../utils/orderTotals');
 const { DEFAULT_IMAGE } = require('../utils/constants');
 const logger          = require('../utils/logger');
 const ErrorResponse   = require('../utils/errorResponse');
+
+const allowedPaymentMethods = new Set(['MERCADOPAGO', 'TRANSFER', 'CASH']);
+const allowedOrderStatuses = new Set(['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']);
+
+const normalizePaymentMethod = (paymentMethod) => {
+    const normalized = paymentMethod ? String(paymentMethod).trim().toUpperCase() : 'MERCADOPAGO';
+    if (!allowedPaymentMethods.has(normalized)) {
+        throw new ErrorResponse(`Método de pago inválido: ${paymentMethod}`, 400);
+    }
+    return normalized;
+};
+
+const normalizeShippingAddress = (shippingAddress) => {
+    if (shippingAddress === undefined || shippingAddress === null) return undefined;
+    if (typeof shippingAddress !== 'object' || Array.isArray(shippingAddress)) {
+        throw new ErrorResponse('La dirección de envío debe ser un objeto válido', 400);
+    }
+
+    const normalizeRequired = (value, field) => {
+        const normalized = typeof value === 'string' ? value.trim() : '';
+        if (!normalized) {
+            throw new ErrorResponse(`shippingAddress.${field} es requerido`, 400);
+        }
+        return normalized;
+    };
+
+    return {
+        fullName: normalizeRequired(shippingAddress.fullName, 'fullName'),
+        street: normalizeRequired(shippingAddress.street, 'street'),
+        city: normalizeRequired(shippingAddress.city, 'city'),
+        state: typeof shippingAddress.state === 'string' && shippingAddress.state.trim()
+            ? shippingAddress.state.trim()
+            : null,
+        zip: normalizeRequired(shippingAddress.zip, 'zip'),
+        country: normalizeRequired(shippingAddress.country, 'country')
+    };
+};
 
 class OrderService {
 
     /**
      * Consolidación Inicial: Chequea inventarios y forja un ticket "Pendiente".
-     * RN (Regla de Atomicidad): Intercepta fallos aislados en reservaciones de stock mediante
+     * RN (Regla de Atomicidad): Intercepta fallos aislados en reservaciones de claves mediante
      * heurísticas de compensación manual (Rollback) simuladas.
      */
     async createOrder({ user, orderItems, shippingAddress, paymentMethod }) {
@@ -38,14 +76,29 @@ class OrderService {
         const backendUrl = process.env.BACKEND_URL;
         if (!backendUrl) throw new ErrorResponse('BACKEND_URL no está configurado.', 500);
 
-        let calculatedTotal = 0;
         const validatedItems = [];
+        const normalizedPaymentMethod = normalizePaymentMethod(paymentMethod);
+        const normalizedShippingAddress = normalizeShippingAddress(shippingAddress);
 
         // RN (Seguridad de Precios): El frontend manda la intención, el Service reconstruye el ticket
         // cotizando con valores limpios atados en la Base de Datos para evitar Inyección de Precios.
-        for (const item of orderItems) {
-            const product = await prisma.product.findUnique({ where: { id: item.product } });
-            if (!product) throw new ErrorResponse(`Producto no encontrado: ${item.name}`, 400);
+        for (const [index, item] of orderItems.entries()) {
+            if (!item || typeof item !== 'object') {
+                throw new ErrorResponse(`orderItems[${index}] debe ser un objeto válido`, 400);
+            }
+
+            const productId = typeof item.product === 'string' ? item.product.trim() : '';
+            if (!productId) {
+                throw new ErrorResponse(`orderItems[${index}].product es obligatorio`, 400);
+            }
+
+            const quantity = Number(item.quantity);
+            if (!Number.isInteger(quantity) || quantity < 1) {
+                throw new ErrorResponse(`orderItems[${index}].quantity debe ser un entero mayor o igual a 1`, 400);
+            }
+
+            const product = await prisma.product.findUnique({ where: { id: productId } });
+            if (!product) throw new ErrorResponse(`Producto no encontrado: ${productId}`, 400);
 
             if (product.status !== 'ACTIVE') {
                 throw new ErrorResponse(`Este producto ya no está disponible: ${product.name}`, 400);
@@ -54,9 +107,9 @@ class OrderService {
             // RN de Disponibilidad por Tipología: el schema actual solo admite digital.
             if (product.type === 'DIGITAL') {
                 const availableKeys = await prisma.digitalKey.count({
-                    where: { productId: item.product, status: 'AVAILABLE' }
+                    where: { productId, status: 'AVAILABLE' }
                 });
-                if (availableKeys < item.quantity) {
+                if (availableKeys < quantity) {
                     throw new ErrorResponse(`Stock insuficiente de keys para: ${product.name} (Disponibles: ${availableKeys})`, 400);
                 }
             }
@@ -64,39 +117,32 @@ class OrderService {
             const component = ProductComponentFactory.create(product);
             const componentPrice = component.getPrice();
 
-            calculatedTotal += componentPrice * item.quantity;
             validatedItems.push({
-                id: product.id,
-                title: item.name,
-                quantity: Number(item.quantity),
-                unit_price: componentPrice, // Precio calculado vía polimorfismo
-                currency_id: 'ARS',
-                picture_url: item.image || undefined,
-                description: product.description?.substring(0, 200) || '',
-                type: product.type
+                productId,
+                quantity,
+                unitPriceAtPurchase: componentPrice // Precio calculado vía polimorfismo
             });
         }
 
         // RN (Regla de Atomicidad): Usamos $transaction para que la creación del pedido
-        // y la reserva de stock sean una sola operación indivisible.
+        // y la reserva de claves sean una sola operación indivisible.
         const order = await prisma.$transaction(async (tx) => {
             // 1. Crear la orden y sus items
             return await tx.order.create({
                 data: {
                     userId: user.id || user._id?.toString() || user,
-                    paymentMethod: (paymentMethod ? paymentMethod.toUpperCase() : 'MERCADOPAGO'),
+                    paymentMethod: normalizedPaymentMethod,
                     shippingPrice: 0,
-                    totalPrice: calculatedTotal,
                     status: 'PENDING',
                     isPaid: false,
-                    shippingAddress: shippingAddress ? { create: shippingAddress } : undefined,
+                    shippingAddress: normalizedShippingAddress ? { create: normalizedShippingAddress } : undefined,
                     orderItems: {
-                        create: validatedItems.map(i => ({
-                            productId: i.id,
-                            quantity: i.quantity,
-                            unitPriceAtPurchase: i.unit_price
-                        }))
+                        create: validatedItems
                     }
+                },
+                include: {
+                    orderItems: true,
+                    shippingAddress: true
                 }
             });
         });
@@ -105,7 +151,7 @@ class OrderService {
         return { 
             orderId: order.id, 
             paymentLink: 'https://link.mercadopago.com.ar/4funstore', 
-            order: { ...order, _id: order.id } 
+            order: attachOrderTotal({ ...order, _id: order.id }) 
         };
     }
 
@@ -128,11 +174,13 @@ class OrderService {
             prisma.order.count({ where: { userId } })
         ]);
 
+        const ordersWithTotals = orders.map(order => attachOrderTotal(order));
+
         return {
             total,
             page: pageNum,
             totalPages: Math.ceil(total / limitNum),
-            orders: orders.map(o => ({
+            orders: ordersWithTotals.map(o => ({
                 ...o,
                 _id: o.id,
                 orderItems: (o.orderItems || []).map(i => ({ 
@@ -163,7 +211,7 @@ class OrderService {
         if (order.userId !== userId && userRole !== 'ADMIN') throw new ErrorResponse('No autorizado para ver esta orden', 403);
         
         return { 
-            ...order, 
+            ...attachOrderTotal(order), 
             _id: order.id,
             orderItems: (order.orderItems || []).map(i => ({ 
                 ...i, 
@@ -198,12 +246,14 @@ class OrderService {
             prisma.order.count({ where })
         ]);
 
+        const ordersWithTotals = orders.map(order => attachOrderTotal(order));
+
         return {
-            count: orders.length,
+            count: ordersWithTotals.length,
             total,
             page: pageNum,
             totalPages: Math.ceil(total / limitNum),
-            orders: orders.map(o => ({ 
+            orders: ordersWithTotals.map(o => ({ 
                 ...o, 
                 _id: o.id,
                 orderItems: (o.orderItems || []).map(i => ({ 
@@ -221,7 +271,12 @@ class OrderService {
         const order = await prisma.order.findUnique({ where: { id: orderId } });
         if (!order) throw new ErrorResponse('Orden no encontrada', 404);
         
-        const updated = await prisma.order.update({ where: { id: orderId }, data: { status: status } });
+        const normalizedStatus = typeof status === 'string' ? status.trim().toUpperCase() : '';
+        if (!allowedOrderStatuses.has(normalizedStatus)) {
+            throw new ErrorResponse(`Estado de orden inválido: ${status}`, 400);
+        }
+
+        const updated = await prisma.order.update({ where: { id: orderId }, data: { status: normalizedStatus } });
         return { ...updated, _id: updated.id };
     }
 
@@ -252,13 +307,13 @@ class OrderService {
 
         // Notify event bus of the payment event, but do not send keys yet as they are not assigned.
         await orderEventBus.notify('order:paid', {
-            order: updatedOrder,
+            order: attachOrderTotal(updatedOrder),
             digitalKeys: [],
             meta: { shouldSendKeysEmail: false }
         });
 
         return {
-            ...updatedOrder,
+            ...attachOrderTotal(updatedOrder),
             _id: updatedOrder.id
         };
     }
@@ -330,10 +385,16 @@ class OrderService {
                     where: { productId: item.productId, status: 'AVAILABLE', isActive: true }
                 });
 
-                await tx.product.update({
-                    where: { id: item.productId },
-                    data: { stock: currentAvailable }
-                });
+                const nextStatus = currentAvailable > 0
+                    ? (item.product?.status === 'OUT_OF_STOCK' ? 'ACTIVE' : item.product?.status)
+                    : 'OUT_OF_STOCK';
+
+                if (nextStatus && nextStatus !== item.product?.status) {
+                    await tx.product.update({
+                        where: { id: item.productId },
+                        data: { status: nextStatus }
+                    });
+                }
             }
 
             const updatedOrder = await tx.order.findUnique({
@@ -345,7 +406,7 @@ class OrderService {
                 }
             });
 
-            return { updatedOrder, assignedKeysCount };
+            return { updatedOrder: attachOrderTotal(updatedOrder), assignedKeysCount };
         });
 
         // Notify event bus to trigger email now that keys are assigned
@@ -402,16 +463,17 @@ class OrderService {
             const sellerId = firstItem.product?.sellerId;
 
             if (sellerId) {
+                const orderTotal = calculateOrderTotal(order);
                 const transaction = await prisma.transaction.create({
                     data: {
                         orderId: order.id,
                         sellerId,
-                        amount: order.totalPrice,
+                        amount: orderTotal,
                         status: 'PENDING_APPROVAL'
                     }
                 });
 
-                logger.info(`[OrderService] Transacción de escrow creada para orden ${order.id} - Vendedor: ${sellerId} - Monto: $${order.totalPrice} - Status: PENDING_APPROVAL`);
+                logger.info(`[OrderService] Transacción de escrow creada para orden ${order.id} - Vendedor: ${sellerId} - Monto: $${orderTotal} - Status: PENDING_APPROVAL`);
                 return transaction;
             }
         }

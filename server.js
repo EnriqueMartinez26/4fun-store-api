@@ -96,10 +96,8 @@ app.use('/api/genres', require('./routes/genreRoutes'));
 app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 
 app.use('/api/keys', require('./routes/keyRoutes'));
-app.use('/api/coupons', require('./routes/couponRoutes'));
 app.use('/api/contact', require('./routes/contactRoutes'));
 app.use('/api/reviews', require('./routes/reviewRoutes'));
-app.use('/api/transactions', require('./routes/transactionRoutes'));
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

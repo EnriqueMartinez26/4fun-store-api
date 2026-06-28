@@ -8,6 +8,7 @@ const UserService = require('../services/userService');
 const ErrorResponse = require('../utils/errorResponse');
 const logger = require('../utils/logger');
 const prisma = require('../lib/prisma');
+const { attachOrderTotal } = require('../utils/orderTotals');
 
 /**
  * Despliega listado masivo con indexación filtrada.
@@ -91,7 +92,8 @@ exports.getUserById = async (req, res, next) => {
       include: { orderItems: { include: { product: true } }, shippingAddress: true }
     });
 
-    const paidOrders = orders.filter(o => o.isPaid);
+    const ordersWithTotals = orders.map(order => attachOrderTotal(order));
+    const paidOrders = ordersWithTotals.filter(o => o.isPaid);
     const totalSpent = paidOrders.reduce((sum, o) => sum + Number(o.totalPrice), 0);
     const lastOrderDate = paidOrders.length > 0 ? paidOrders[0].createdAt : null;
 
@@ -100,7 +102,7 @@ exports.getUserById = async (req, res, next) => {
       data: {
         ...user,
         stats: { totalSpent, orderCount: paidOrders.length, totalOrders: orders.length, lastOrderDate },
-        orders: orders.map(o => ({
+        orders: ordersWithTotals.map(o => ({
           id: o.id,
           createdAt: o.createdAt,
           totalPrice: Number(o.totalPrice),

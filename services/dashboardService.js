@@ -6,6 +6,7 @@
  */
 
 const prisma = require('../lib/prisma');
+const { calculateOrderTotal } = require('../utils/orderTotals');
 
 class DashboardService {
 
@@ -35,7 +36,14 @@ class DashboardService {
                     NOT: { status: 'ARCHIVED' },
                     ...(sellerId && { sellerId }) 
                 },
-                select: { status: true, stock: true } 
+                select: {
+                    status: true,
+                    _count: {
+                        select: {
+                            digitalKeys: { where: { status: 'AVAILABLE' } }
+                        }
+                    }
+                }
             }),
             prisma.orderItem.findMany({
                 where: { 
@@ -59,7 +67,7 @@ class DashboardService {
         const activeProducts = allProducts.filter(p => p.status === 'ACTIVE').length;
         
         // RN Comercial: Advierte umbrales de escasez severa en depósito.
-        const lowStockProducts = allProducts.filter(p => p.status === 'ACTIVE' && p.stock <= 5).length;
+        const lowStockProducts = allProducts.filter(p => p.status === 'ACTIVE' && (p._count?.digitalKeys ?? 0) <= 5).length;
 
         let currentMonthRev = 0, lastMonthRev = 0;
         for (const o of recentMonthOrders) {
@@ -145,7 +153,15 @@ class DashboardService {
     static async getRecentSales(sellerId = null) {
         const orders = await prisma.order.findMany({
             where: sellerId ? { orderItems: { some: { product: { sellerId } } } } : {},
-            select: { id: true, totalPrice: true, status: true, isPaid: true, createdAt: true, user: { select: { name: true, email: true } } },
+            select: {
+                id: true,
+                shippingPrice: true,
+                status: true,
+                isPaid: true,
+                createdAt: true,
+                user: { select: { name: true, email: true } },
+                orderItems: { select: { quantity: true, unitPriceAtPurchase: true } }
+            },
             orderBy: { createdAt: 'desc' },
             take: 5
         });
@@ -153,7 +169,7 @@ class DashboardService {
         return orders.map(o => ({
             id: o.id,
             user: { name: o.user?.name || 'Usuario Eliminado', email: o.user?.email || 'N/A' },
-            amount: Number(o.totalPrice),
+            amount: calculateOrderTotal(o),
             status: o.status,
             date: o.createdAt
         }));

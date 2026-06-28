@@ -20,13 +20,13 @@ La persistencia de datos está modelada sobre una base de datos relacional **Pos
    - Normaliza los requisitos mínimos o recomendados de cada producto sin usar JSON embebido.
 
 6. **DigitalKey (Clave digital)**:
-   - Inventario de licencias únicas asociadas a un `Product`. El stock operativo se controla con las claves en estado `AVAILABLE` y se sincroniza en el campo `Product.stock` como caché de disponibilidad; cuando una compra se confirma y se asignan claves, pasan a `SOLD` y quedan vinculadas a la orden.
+   - Inventario de licencias únicas asociadas a un `Product`. El stock operativo se controla con las claves en estado `AVAILABLE`; cuando una compra se confirma y se asignan claves, pasan a `SOLD` y la disponibilidad se recalcula a demanda.
 
 7. **Cart (Carrito)** y **CartItem (Ítem del carrito)**:
    - Almacenan de forma persistente los productos que un usuario selecciona antes de iniciar una orden de compra.
 
 8. **Order (Orden)** y **OrderItem (Ítem de la orden)**:
-   - Registran el encabezado y el detalle de la compra. `Order.status` modela el ciclo logístico (`PENDING`, `PROCESSING`, `SHIPPED`, `DELIVERED`, `CANCELLED`) y no reemplaza el estado financiero, que se guarda en `isPaid`, `paidAt` y `Transaction`.
+   - Registran el encabezado y el detalle de la compra. `Order.status` modela el ciclo logístico (`PENDING`, `PROCESSING`, `SHIPPED`, `DELIVERED`, `CANCELLED`) y no reemplaza el estado financiero, que se guarda en `isPaid`, `paidAt` y `Transaction`. El total de la orden se calcula a partir de `shippingPrice + SUM(OrderItem.unitPriceAtPurchase * quantity)` y no se persiste como columna derivada.
 
 9. **ShippingAddress (Dirección de envío)** y **Payment (Pago)**:
    - Normalizan los datos de envío y la información de la pasarela de pago para evitar duplicación en `Order`.
@@ -34,18 +34,15 @@ La persistencia de datos está modelada sobre una base de datos relacional **Pos
 10. **Transaction (Escrow)**:
    - Representa la custodia de fondos asociada a una orden pagada. Su estado es independiente del estado logístico de la orden y se gestiona con `PENDING_APPROVAL`, `FUNDS_RELEASED`, `REJECTED` o `CANCELLED`.
 
-11. **Coupon (Cupón)**:
-   - Cupones de descuento con código único, vigencia, límite de uso y valor de descuento.
-
-12. **Review (Reseña)** y **ReviewHelpfulVote (Voto útil)**:
+11. **Review (Reseña)** y **ReviewHelpfulVote (Voto útil)**:
    - Reseñas de productos y votos de utilidad normalizados en tablas separadas.
 
-13. **Wishlist (Lista de deseos)** y **WishlistItem (Ítem de lista)**:
+12. **Wishlist (Lista de deseos)** y **WishlistItem (Ítem de lista)**:
    - Persisten la relación entre usuarios y productos guardados para seguimiento posterior.
 
 ## Relaciones Críticas
 
-- **Relación de stock (1 a N)**: Un `Product` tiene muchas `DigitalKey`. El stock operativo se deriva de las claves activas con estado `AVAILABLE` y se refleja en `Product.stock` para consultas rápidas.
+- **Relación de stock (1 a N)**: Un `Product` tiene muchas `DigitalKey`. El stock operativo se deriva de las claves activas con estado `AVAILABLE` y se expone calculado en la capa de servicio.
 - **Relación de compra (1 a N)**: Un `User` puede generar muchas `Order`, cada una con múltiples `OrderItem` enlazados a `Product`.
 - **Separación financiera**: El estado del pedido, el pago y la custodia no se mezclan en un solo campo. `Order.status`, `Order.isPaid` y `Transaction.status` resuelven problemas distintos.
 - **Relación vendedor-producto**: Cada `Product` pertenece a un vendedor; si el usuario tiene rol `SELLER`, puede estar asociado además a un `SellerProfile`.

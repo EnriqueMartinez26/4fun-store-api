@@ -15,9 +15,8 @@
  *   ha sido eliminado y encapsulado aquí, sin efectos en el contexto.
  *
  * RN (Regla de Negocio — Productos Digitales):
- *   El stock real NO es el campo `stock` de la tabla. Es el conteo dinámico
- *   de DigitalKeys con estado 'DISPONIBLE' para ese producto en la BD.
- *   Esto previene la inconsistencia al usar el campo estático como fuente de verdad.
+ *   El stock real se deriva del conteo dinámico de DigitalKeys con estado
+ *   'AVAILABLE' para ese producto en la BD.
  */
 
 const PricingStrategy = require('./PricingStrategy');
@@ -49,12 +48,10 @@ class DigitalProductStrategy extends PricingStrategy {
 
     /**
      * Para productos digitales, el stock disponible es el conteo de
-     * DigitalKeys con estado 'DISPONIBLE' (_count.digitalKeys). El campo
-     * `stock` de la tabla no es la fuente de verdad: se actualiza como
-     * cache tras cada venta, pero el conteo de keys es el valor confiable.
+     * DigitalKeys con estado 'AVAILABLE' (_count.digitalKeys).
      *
      * RN (Disponibilidad Digital): Si `_count` no está disponible (consulta sin
-     * include), se hace fallback al campo `stock` como valor de reserva.
+     * include), se hace fallback al listado de keys cargado en memoria.
      *
      * @override Polimorfismo — Lee stock del conteo de keys en la relación.
      * @param {object} p - Entidad cruda de Prisma (producto).
@@ -62,7 +59,7 @@ class DigitalProductStrategy extends PricingStrategy {
      */
     calculateStock(p) {
         // RN (Integridad Digital): La fuente primaria es el conteo relacional de Keys.
-        return p._count?.digitalKeys ?? p.stock;
+        return p._count?.digitalKeys ?? (p.digitalKeys?.filter((key) => key.status === 'AVAILABLE').length ?? 0);
     }
 }
 

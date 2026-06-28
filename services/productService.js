@@ -21,6 +21,38 @@ const resolveProductImageUrl = (data = {}) => {
     return trimmed ? trimmed : undefined;
 };
 
+const allowedSpecPresets = new Set(['LOW', 'MID', 'HIGH']);
+
+const normalizeBoolean = (value) => value === true || (typeof value === 'string' && value.trim().toLowerCase() === 'true');
+
+const normalizeSpecPreset = (value) => {
+    if (value === undefined || value === null || value === '') return null;
+
+    const normalized = String(value).trim().toUpperCase();
+    if (!allowedSpecPresets.has(normalized)) {
+        throw new ErrorResponse(`specPreset inválido: ${value}`, 400);
+    }
+
+    return normalized;
+};
+
+const normalizeDiscountPercentage = (value, fallback = 0) => {
+    if (value === undefined || value === null || value === '') return fallback;
+
+    const normalized = Number(value);
+    if (!Number.isFinite(normalized) || normalized < 0 || normalized > 100) {
+        throw new ErrorResponse(`Porcentaje de descuento inválido: ${value}`, 400);
+    }
+
+    return normalized;
+};
+
+const hasMeaningfulValue = (value) => {
+    if (value === undefined || value === null) return false;
+    if (typeof value === 'string') return value.trim() !== '';
+    return true;
+};
+
 /**
  * Capa de Servicios: Catálogo de Productos (Dominio)
  * --------------------------------------------------------------------------
@@ -296,31 +328,41 @@ class ProductService extends BaseService {
      */
     async createProduct(data) {
         const { name, description, price, platform: platformSlug, genre: genreSlug, platformId, genreId, type,
-            releaseDate, developer, imageId, imageUrl, trailerUrl, stock, active, specPreset,
+            releaseDate, developer, imageId, imageUrl, trailerUrl, active, specPreset,
             requirements, discountPercentage, discountEndDate, sellerId } = data;
 
+        const normalizedName = typeof name === 'string' ? name.trim() : name;
+        const normalizedDescription = typeof description === 'string' ? description.trim() : description;
+        const normalizedDeveloper = typeof developer === 'string' ? developer.trim() : developer;
+        const normalizedTrailerUrl = typeof trailerUrl === 'string' ? trailerUrl.trim() : trailerUrl;
+        const normalizedPrice = typeof price === 'string' ? price.trim() : price;
+        const normalizedPlatformId = hasMeaningfulValue(platformId) ? String(platformId).trim() : null;
+        const normalizedPlatformSlug = hasMeaningfulValue(platformSlug) ? String(platformSlug).trim() : null;
+        const normalizedGenreId = hasMeaningfulValue(genreId) ? String(genreId).trim() : null;
+        const normalizedGenreSlug = hasMeaningfulValue(genreSlug) ? String(genreSlug).trim() : null;
+
         // RN - Integridad Taxonómica (3NF): Los campos de clasificación son MANDATORIOS.
-        if (!platformId && !platformSlug) throw new ErrorResponse('La Plataforma es obligatoria para la integridad del catálogo', 400);
-        if (!genreId && !genreSlug) throw new ErrorResponse('El Género es obligatorio para la integridad del catálogo', 400);
+        if (!normalizedPlatformId && !normalizedPlatformSlug) throw new ErrorResponse('La Plataforma es obligatoria para la integridad del catálogo', 400);
+        if (!normalizedGenreId && !normalizedGenreSlug) throw new ErrorResponse('El Género es obligatorio para la integridad del catálogo', 400);
 
         // RN - Validación Cruzada: Verifica existencia de dependencias taxonómicas activas.
         let platformRecord = null;
-        if (platformId) {
-            platformRecord = await prisma.platform.findFirst({ where: { id: platformId, isActive: true } });
+        if (normalizedPlatformId) {
+            platformRecord = await prisma.platform.findFirst({ where: { id: normalizedPlatformId, isActive: true } });
         }
-        if (!platformRecord && platformSlug) {
-            platformRecord = await prisma.platform.findFirst({ where: { slug: platformSlug, isActive: true } });
+        if (!platformRecord && normalizedPlatformSlug) {
+            platformRecord = await prisma.platform.findFirst({ where: { slug: normalizedPlatformSlug, isActive: true } });
         }
-        if (!platformRecord) throw new ErrorResponse(`Plataforma '${platformSlug}' no encontrada`, 400);
+        if (!platformRecord) throw new ErrorResponse(`Plataforma no encontrada: ${normalizedPlatformId || normalizedPlatformSlug}`, 400);
 
         let genreRecord = null;
-        if (genreId) {
-            genreRecord = await prisma.genre.findFirst({ where: { id: genreId, isActive: true } });
+        if (normalizedGenreId) {
+            genreRecord = await prisma.genre.findFirst({ where: { id: normalizedGenreId, isActive: true } });
         }
-        if (!genreRecord && genreSlug) {
-            genreRecord = await prisma.genre.findFirst({ where: { slug: genreSlug, isActive: true } });
+        if (!genreRecord && normalizedGenreSlug) {
+            genreRecord = await prisma.genre.findFirst({ where: { slug: normalizedGenreSlug, isActive: true } });
         }
-        if (!genreRecord) throw new ErrorResponse(`Género '${genreSlug}' no encontrado`, 400);
+        if (!genreRecord) throw new ErrorResponse(`Género no encontrado: ${normalizedGenreId || normalizedGenreSlug}`, 400);
 
         const resolvedImageUrl = resolveProductImageUrl({ imageId, imageUrl });
 
@@ -330,6 +372,8 @@ class ProductService extends BaseService {
 
         // RN - Solo Digital: El schema solo admite productos digitales.
         const tipo = 'DIGITAL';
+        const normalizedSpecPreset = normalizeSpecPreset(specPreset);
+        const normalizedDiscountPercentage = normalizeDiscountPercentage(discountPercentage);
 
         // Normalización de Requisitos de Hardware para persistencia relación M2M/12 Muitos.
         const requirementsData = [];
@@ -349,20 +393,19 @@ class ProductService extends BaseService {
 
         const product = await prisma.product.create({
             data: {
-                name,
-                description,
-                price,
+                name: normalizedName,
+                description: normalizedDescription,
+                price: normalizedPrice,
                 platformId: platformRecord.id,
                 genreId: genreRecord.id,
                 type: tipo,
                 releaseDate: releaseDate ? new Date(releaseDate) : new Date(),
-                developer,
+                developer: normalizedDeveloper,
                 imageUrl: resolvedImageUrl || 'https://placehold.co/600x400?text=Sin+Imagen',
-                trailerUrl: trailerUrl || null,
-                stock: tipo === 'DIGITAL' ? 0 : (stock ?? 0),
-                status: active === false ? 'DRAFT' : 'DRAFT', // Por defecto DRAFT hasta validación de stock
-                specPreset: specPreset ? specPreset.toUpperCase() : null,
-                discountPercent: discountPercentage ?? 0,
+                trailerUrl: normalizedTrailerUrl || null,
+                status: 'DRAFT', // Por defecto DRAFT hasta validación de disponibilidad
+                specPreset: normalizedSpecPreset,
+                discountPercent: normalizedDiscountPercentage,
                 discountEndDate: discountEndDate ? new Date(discountEndDate) : null,
                 displayOrder: newOrder,
                 sellerId,
@@ -373,8 +416,8 @@ class ProductService extends BaseService {
 
         logger.info(`[ProductService] Producto creado: ${product.id}`);
         
-        // RN - Activación Automática: Si se solicitó activo, validamos stock.
-        if (active === true || active === 'true') {
+        // RN - Activación Automática: Si se solicitó activo, validamos disponibilidad.
+        if (normalizeBoolean(active)) {
             return await this.updateProduct(product.id, { active: true });
         }
 
@@ -391,69 +434,71 @@ class ProductService extends BaseService {
 
         const updateData = {};
         const resolvedImageUrl = resolveProductImageUrl(data);
-        const fields = [
-            'name',
-            'description',
-            'price',
-            'developer',
-            'trailerUrl',
-            'active:isActive',
-            'specPreset',
-            'discountPercentage:discountPercent'
-        ];
-        
-        fields.forEach(field => {
-            const [src, dest] = field.split(':');
-            const target = dest || src;
-            if (data[src] !== undefined) {
-                if (target === 'isActive') {
-                    updateData.status = data[src] ? 'ACTIVE' : 'DRAFT';
-                } else {
-                    updateData[target] = data[src];
-                }
+        const fields = ['name', 'description', 'price', 'developer', 'trailerUrl'];
+
+        fields.forEach((field) => {
+            if (hasMeaningfulValue(data[field])) {
+                updateData[field] = typeof data[field] === 'string' ? data[field].trim() : data[field];
             }
         });
 
-        // RN - Normalización de Enums (3NF): Prisma es case-sensitive.
-        if (updateData.specPreset) {
-            updateData.specPreset = updateData.specPreset.toUpperCase();
+        if (hasMeaningfulValue(data.active)) {
+            updateData.status = normalizeBoolean(data.active) ? 'ACTIVE' : 'DRAFT';
         }
 
-        if (data.releaseDate !== undefined) updateData.releaseDate = new Date(data.releaseDate);
-        if (data.discountEndDate !== undefined) updateData.discountEndDate = data.discountEndDate ? new Date(data.discountEndDate) : null;
-        if (data.type !== undefined) updateData.type = 'DIGITAL';
+        if (hasMeaningfulValue(data.specPreset)) {
+            updateData.specPreset = normalizeSpecPreset(data.specPreset);
+        }
+
+        if (hasMeaningfulValue(data.discountPercentage)) {
+            updateData.discountPercent = normalizeDiscountPercentage(data.discountPercentage);
+        }
+
+        if (hasMeaningfulValue(data.releaseDate)) updateData.releaseDate = new Date(data.releaseDate);
+        if (data.discountEndDate === null) {
+            updateData.discountEndDate = null;
+        } else if (hasMeaningfulValue(data.discountEndDate)) {
+            updateData.discountEndDate = new Date(data.discountEndDate);
+        }
+        if (hasMeaningfulValue(data.type)) updateData.type = 'DIGITAL';
         if (resolvedImageUrl !== undefined) updateData.imageUrl = resolvedImageUrl;
 
-        if (data.platformId !== undefined) {
-            const p = await prisma.platform.findFirst({ where: { id: data.platformId, isActive: true } });
-            if (p) updateData.platformId = p.id;
-        } else if (data.platform !== undefined) {
-            const p = await prisma.platform.findFirst({ where: { slug: data.platform, isActive: true } });
-            if (p) updateData.platformId = p.id;
+        const normalizedPlatformId = hasMeaningfulValue(data.platformId) ? String(data.platformId).trim() : null;
+        const normalizedPlatformSlug = hasMeaningfulValue(data.platform) ? String(data.platform).trim() : null;
+        const normalizedGenreId = hasMeaningfulValue(data.genreId) ? String(data.genreId).trim() : null;
+        const normalizedGenreSlug = hasMeaningfulValue(data.genre) ? String(data.genre).trim() : null;
+
+        if (normalizedPlatformId) {
+            const p = await prisma.platform.findFirst({ where: { id: normalizedPlatformId, isActive: true } });
+            if (!p) throw new ErrorResponse(`Plataforma no encontrada: ${normalizedPlatformId}`, 400);
+            updateData.platformId = p.id;
+        } else if (normalizedPlatformSlug) {
+            const p = await prisma.platform.findFirst({ where: { slug: normalizedPlatformSlug, isActive: true } });
+            if (!p) throw new ErrorResponse(`Plataforma no encontrada: ${normalizedPlatformSlug}`, 400);
+            updateData.platformId = p.id;
         }
 
-        if (data.genreId !== undefined) {
-            const g = await prisma.genre.findFirst({ where: { id: data.genreId, isActive: true } });
-            if (g) updateData.genreId = g.id;
-        } else if (data.genre !== undefined) {
-            const g = await prisma.genre.findFirst({ where: { slug: data.genre, isActive: true } });
-            if (g) updateData.genreId = g.id;
+        if (normalizedGenreId) {
+            const g = await prisma.genre.findFirst({ where: { id: normalizedGenreId, isActive: true } });
+            if (!g) throw new ErrorResponse(`Género no encontrado: ${normalizedGenreId}`, 400);
+            updateData.genreId = g.id;
+        } else if (normalizedGenreSlug) {
+            const g = await prisma.genre.findFirst({ where: { slug: normalizedGenreSlug, isActive: true } });
+            if (!g) throw new ErrorResponse(`Género no encontrado: ${normalizedGenreSlug}`, 400);
+            updateData.genreId = g.id;
         }
 
-        // RN - Integridad de Inventario Digital: El stock siempre se deriva del conteo
+        // RN - Integridad de Inventario Digital: El estado se define por el conteo
         // de keys disponibles, ya que no hay una rama física en este schema.
-        const digitalStock = await prisma.digitalKey.count({
+        const currentAvailable = await prisma.digitalKey.count({
             where: { productId: id, status: 'AVAILABLE' }
         });
-        updateData.stock = digitalStock;
 
-        // RN - Suspensión de Venta: No puede ser ACTIVE si stock == 0.
+        // RN - Suspensión de Venta: No puede ser ACTIVE si no hay keys disponibles.
         const finalStatus = updateData.status || existing.status;
-        const finalStock = updateData.stock !== undefined ? updateData.stock : existing.stock;
-        
-        if (finalStatus === 'ACTIVE' && finalStock <= 0) {
+        if (finalStatus === 'ACTIVE' && currentAvailable <= 0) {
             updateData.status = 'OUT_OF_STOCK';
-            logger.warn(`[ProductService] Intento de activar producto sin stock (${id}). Cambiado a OUT_OF_STOCK.`);
+            logger.warn(`[ProductService] Intento de activar producto sin disponibilidad (${id}). Cambiado a OUT_OF_STOCK.`);
         }
 
         // Manejo de Excepciones en Relaciones: Si vienen requisitos nuevos, borra los anteriores 
@@ -517,25 +562,13 @@ class ProductService extends BaseService {
         return true;
     }
 
-    async deleteProducts(ids) {
-        // Limpieza de relaciones Bundle antes de la desactivación masiva
-        await prisma.bundleItem.deleteMany({
-            where: { OR: [{ bundleId: { in: ids } }, { productId: { in: ids } }] }
-        }).catch(() => {});
-
-        return await prisma.product.updateMany({
-            where: { id: { in: ids } },
-            data: { status: 'ARCHIVED' }
-        });
-    }
-
     /**
      * Valida que un usuario (seller o admin) tenga permisos para eliminar un conjunto de productos.
-     * 
-     * RN (Seguridad): 
+     *
+     * RN (Seguridad):
      * - Admin: Puede eliminar cualquier producto
      * - Seller: Solo puede eliminar sus propios productos
-     * 
+     *
      * @param {string[]} ids - Array de IDs de productos
      * @param {string} userId - ID del usuario autenticado
      * @param {string} userRole - Rol del usuario ('admin', 'seller')
@@ -546,12 +579,10 @@ class ProductService extends BaseService {
             return { valid: true };
         }
 
-        // Fast-path: Admin tiene acceso global
         if (userRole === 'ADMIN') {
             return { valid: true };
         }
 
-        // Sellers: Valida que todos los productos sean suyos
         const unauthorizedIds = [];
         const products = await prisma.product.findMany({
             where: { id: { in: ids } },
@@ -565,8 +596,8 @@ class ProductService extends BaseService {
         }
 
         if (unauthorizedIds.length > 0) {
-            return { 
-                valid: false, 
+            return {
+                valid: false,
                 unauthorizedIds,
                 message: `No tienes permisos para eliminar los productos: ${unauthorizedIds.join(', ')}`
             };
@@ -575,46 +606,6 @@ class ProductService extends BaseService {
         return { valid: true };
     }
 
-    /**
-     * Reordena la posición visual en el escaparate.
-     * Algoritmo de "Lexicographical Spacing" para insertar entre dos valores sin colisiones masivas.
-     */
-    async reorderProduct(id, newPosition) {
-        if (newPosition < 1) throw new ErrorResponse('Posición inválida', 400);
-
-        const product = await prisma.product.findUnique({ where: { id } });
-        if (!product || product.status === 'ARCHIVED') throw new ErrorResponse('Producto no encontrable o archivado', 404);
-
-        const otherProducts = await prisma.product.findMany({
-            where: { id: { not: id }, status: 'ACTIVE' },
-            orderBy: { displayOrder: 'asc' }
-        });
-
-        let targetIndex = Math.min(Math.max(0, newPosition - 1), otherProducts.length);
-        const prevProduct = targetIndex > 0 ? otherProducts[targetIndex - 1] : null;
-        const nextProduct = targetIndex < otherProducts.length ? otherProducts[targetIndex] : null;
-
-        if (!prevProduct && !nextProduct) {
-            await prisma.product.update({ where: { id }, data: { displayOrder: 1000 } });
-            return true;
-        }
-
-        let prevOrder = prevProduct ? prevProduct.displayOrder : (nextProduct ? nextProduct.displayOrder - 2000 : 0);
-        let nextOrder = nextProduct ? nextProduct.displayOrder : (prevProduct ? prevProduct.displayOrder + 2000 : 2000);
-        let newOrder = (prevOrder + nextOrder) / 2;
-
-        // Mitigación de Colisión: Si el espacio decimal se agota, recalibra todo el stack comercial.
-        if (Math.abs(newOrder - prevOrder) < 0.005) {
-            otherProducts.splice(targetIndex, 0, product);
-            await Promise.all(otherProducts.map((p, index) =>
-                prisma.product.update({ where: { id: p.id }, data: { displayOrder: (index + 1) * 1000 } })
-            ));
-            return true;
-        }
-
-        await prisma.product.update({ where: { id }, data: { displayOrder: newOrder } });
-        return true;
-    }
 }
 
 module.exports = new ProductService();

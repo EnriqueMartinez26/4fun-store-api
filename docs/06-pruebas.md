@@ -28,7 +28,7 @@ Para garantizar la fiabilidad del backend y la robustez de las reglas de negocio
 - **Creación de Orden Válida**: Genera una orden en estado `PENDING` de forma exitosa cuando se cumplen todos los requisitos.
 
 ### 4. Claves Digitales (`orderAndTransactionService.test.js`)
-- **Asignación Atómica**: Comprueba que al marcar una orden como pagada, se busquen las keys correspondientes, se asocien a la orden, se marquen como usadas (`SOLD`) y se sincronice el `Product.stock` como caché de disponibilidad.
+- **Asignación Atómica**: Comprueba que al marcar una orden como pagada, se busquen las keys correspondientes, se asocien a la orden, se marquen como usadas (`SOLD`) y se recalcule la disponibilidad del producto a partir de las keys restantes.
 - **Protección contra Doble Asignación**: Valida que una clave solo sea asignable a una orden activa y no se asigne repetidas veces.
 
 ### 5. Transacciones y Escrow (`orderAndTransactionService.test.js`)

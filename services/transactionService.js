@@ -15,6 +15,7 @@
 const prisma = require('../lib/prisma');
 const ErrorResponse = require('../utils/errorResponse');
 const logger = require('../utils/logger');
+const { attachOrderTotal, calculateOrderTotal } = require('../utils/orderTotals');
 
 class TransactionService {
 
@@ -39,18 +40,35 @@ class TransactionService {
 
         // Validación: Previene duplicados (una orden = una transacción)
         const existing = await prisma.transaction.findUnique({
-            where: { orderId }
+            where: { orderId },
+            include: {
+                seller: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                },
+                order: {
+                    include: {
+                        orderItems: true
+                    }
+                }
+            }
         });
 
         if (existing) {
             logger.warn(`[Transaction] Transacción ya existe para orden ${orderId}`);
-            return existing;
+            return {
+                ...existing,
+                order: attachOrderTotal(existing.order)
+            };
         }
 
         // Validación: Orden existe
         const order = await prisma.order.findUnique({
             where: { id: orderId },
-            select: { id: true, totalPrice: true, userId: true }
+            select: { id: true, userId: true }
         });
 
         if (!order) {
@@ -75,9 +93,8 @@ class TransactionService {
                     }
                 },
                 order: {
-                    select: {
-                        id: true,
-                        totalPrice: true
+                    include: {
+                        orderItems: true
                     }
                 }
             }
@@ -85,7 +102,10 @@ class TransactionService {
 
         logger.info(`[Transaction] Transacción creada: ${transaction.id} - Orden: ${orderId} - Amount: $${amount} - Status: PENDING_APPROVAL`);
 
-        return transaction;
+        return {
+            ...transaction,
+            order: attachOrderTotal(transaction.order)
+        };
     }
 
     /**
@@ -109,7 +129,7 @@ class TransactionService {
         const transaction = await prisma.transaction.findUnique({
             where: { id: transactionId },
             include: {
-                order: true,
+                order: { include: { orderItems: true } },
                 seller: { select: { id: true, name: true, email: true } },
                 approvalAdmin: { select: { id: true, name: true } }
             }
@@ -141,9 +161,8 @@ class TransactionService {
         }
 
         // RN - Doble Validación de Monto: El monto de la transacción debe coincidir 
-        // exactamente con la sumatoria de unitPriceAtPurchase de los items.
-        const orderItems = await prisma.orderItem.findMany({ where: { orderId: transaction.orderId } });
-        const calculatedTotal = orderItems.reduce((acc, item) => acc + (Number(item.unitPriceAtPurchase) * item.quantity), 0);
+        // exactamente con la sumatoria del detalle de la orden.
+        const calculatedTotal = calculateOrderTotal(transaction.order);
         
         // Tolerancia de 0.01 por redondeos de Decimal en DB
         if (Math.abs(calculatedTotal - Number(transaction.amount)) > 0.01) {
@@ -169,9 +188,8 @@ class TransactionService {
                     }
                 },
                 order: {
-                    select: {
-                        id: true,
-                        totalPrice: true
+                    include: {
+                        orderItems: true
                     }
                 },
                 approvalAdmin: {
@@ -188,7 +206,10 @@ class TransactionService {
             `[Transaction] Transacción aprobada: ${transactionId} - Vendedor: ${transaction.seller.name} - Monto: $${transaction.amount} - Admin: ${adminId} - Timestamp: ${now.toISOString()}`
         );
 
-        return approvedTransaction;
+        return {
+            ...approvedTransaction,
+            order: attachOrderTotal(approvedTransaction.order)
+        };
     }
 
     /**
@@ -252,9 +273,8 @@ class TransactionService {
                     }
                 },
                 order: {
-                    select: {
-                        id: true,
-                        totalPrice: true
+                    include: {
+                        orderItems: true
                     }
                 }
             }
@@ -264,7 +284,10 @@ class TransactionService {
             `[Transaction] Transacción rechazada: ${transactionId} - Vendedor: ${transaction.seller.name} - Monto: $${transaction.amount} - Admin: ${adminId} - Motivo: ${reason}`
         );
 
-        return rejectedTransaction;
+        return {
+            ...rejectedTransaction,
+            order: attachOrderTotal(rejectedTransaction.order)
+        };
     }
 
     /**
@@ -285,7 +308,7 @@ class TransactionService {
                 where,
                 include: {
                     seller: { select: { id: true, name: true, email: true } },
-                    order: { select: { id: true, totalPrice: true } }
+                    order: { include: { orderItems: true } }
                 },
                 orderBy: { createdAt: 'desc' },
                 skip: (pageNum - 1) * limitNum,
@@ -302,7 +325,8 @@ class TransactionService {
             transactions: transactions.map(t => ({
                 ...t,
                 _id: t.id,
-                amount: Number(t.amount)
+                amount: Number(t.amount),
+                order: attachOrderTotal(t.order)
             }))
         };
     }
@@ -377,7 +401,7 @@ class TransactionService {
             prisma.transaction.findMany({
                 where,
                 include: {
-                    order: { select: { id: true, totalPrice: true } },
+                    order: { include: { orderItems: true } },
                     approvalAdmin: { select: { id: true, name: true } }
                 },
                 orderBy: { createdAt: 'desc' },
@@ -395,7 +419,8 @@ class TransactionService {
             transactions: transactions.map(t => ({
                 ...t,
                 _id: t.id,
-                amount: Number(t.amount)
+                amount: Number(t.amount),
+                order: attachOrderTotal(t.order)
             }))
         };
     }
@@ -439,7 +464,8 @@ class TransactionService {
         return {
             ...transaction,
             _id: transaction.id,
-            amount: Number(transaction.amount)
+            amount: Number(transaction.amount),
+            order: attachOrderTotal(transaction.order)
         };
     }
 

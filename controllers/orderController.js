@@ -6,7 +6,6 @@
  */
 
 const OrderService = require('../services/orderService');
-const logger = require('../utils/logger');
 
 /**
  * Inicializa el embudo de cobro construyendo la pre-orden y despachando al proveedor (MercadoPago).
@@ -16,9 +15,12 @@ const logger = require('../utils/logger');
  */
 exports.createOrder = async (req, res, next) => {
   try {
+    const { orderItems, shippingAddress, paymentMethod } = req.body;
     const result = await OrderService.createOrder({
       user: req.user,
-      ...req.body
+      orderItems,
+      shippingAddress,
+      paymentMethod
     });
     res.status(201).json({
       success: true,
@@ -30,17 +32,12 @@ exports.createOrder = async (req, res, next) => {
 };
 
 /**
-// Excepciones (ej: Carrito vacío) controladas centralmente.
-};
-
-/**
  * Consulta de facturación histórica restringida al cliente autenticado.
  */
 exports.getUserOrders = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 5;
+    const { page, limit } = req.query;
     
     const result = await OrderService.getUserOrders(userId, { page, limit });
     res.json({ 
@@ -69,7 +66,8 @@ exports.getOrder = async (req, res, next) => {
  */
 exports.getAllOrders = async (req, res, next) => {
   try {
-    const result = await OrderService.getAllOrders(req.query);
+    const { page, limit, status, userId } = req.query;
+    const result = await OrderService.getAllOrders({ page, limit, status, userId });
     res.json({
       success: true,
       ...result
@@ -82,7 +80,8 @@ exports.getAllOrders = async (req, res, next) => {
  */
 exports.updateOrderStatus = async (req, res, next) => {
   try {
-    const order = await OrderService.updateOrderStatus(req.params.id, req.body.status);
+    const { status } = req.body;
+    const order = await OrderService.updateOrderStatus(req.params.id, status);
     res.json({ success: true, order });
   } catch (error) { next(error); }
 };

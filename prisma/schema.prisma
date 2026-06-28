@@ -83,12 +83,6 @@ enum ProductStatus {
   ARCHIVED      // Borrado lógico para integridad histórica
 }
 
-/// Tipo de descuento (cupones)
-enum DiscountType {
-  PERCENTAGE
-  FIXED
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // ENTIDADES DE REFERENCIA (Tablas Maestras)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -199,6 +193,7 @@ model SellerProfile {
 // CAMPOS ELIMINADOS (3NF — datos derivables):
 //   - calificacion:    AVG(Review.rating)    → calcular en runtime
 //   - cantidadVendida: SUM(OrderItem.quantity) → calcular en runtime
+//   - stock:           COUNT(DigitalKey.status = 'AVAILABLE') → calcular en runtime
 
 /// Producto de software (hoja o bundle según Composite)
 model Product {
@@ -211,7 +206,6 @@ model Product {
   developer        String
   imageUrl         String      @default("https://placehold.co/600x400?text=No+Image")
   trailerUrl       String?
-  stock            Int           @default(0)
   status           ProductStatus @default(DRAFT)
   specPreset       SpecPreset?
   discountPercent  Int         @default(0)     // Strategy: descuento temporal (%)
@@ -295,7 +289,7 @@ model BundleItem {
 //      que preserva la integridad histórica del precio pagado.
 //
 // CAMPOS ELIMINADOS (3NF — datos derivables):
-//   - Order.itemsPrice: SUM(OrderItem.unitPriceAtPurchase * quantity)
+//   - Order.totalPrice: shippingPrice + SUM(OrderItem.unitPriceAtPurchase * quantity)
 
 /// Orden de compra
 model Order {
@@ -304,7 +298,6 @@ model Order {
   paymentMethod PaymentMethod @default(MERCADOPAGO) // Enum cerrado
   externalId    String?       @unique               // ID de pasarela de pago
   shippingPrice Decimal       @db.Decimal(10, 2)
-  totalPrice    Decimal       @db.Decimal(10, 2)     // shippingPrice + SUM(items)
   status        OrderStatus   @default(PENDING)
   isPaid        Boolean       @default(false)
   paidAt        DateTime?
@@ -508,22 +501,3 @@ model Transaction {
   @@index([createdAt])
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// CUPONES
-// ─────────────────────────────────────────────────────────────────────────────
-// 3NF: Entidad independiente. Todos los atributos dependen de couponId.
-
-/// Cupón de descuento
-model Coupon {
-  id           String       @id @default(uuid())
-  code         String       @unique
-  discountType DiscountType @default(PERCENTAGE)
-  value        Decimal      @db.Decimal(10, 2)
-  minPurchase  Decimal      @default(0) @db.Decimal(10, 2)
-  usageLimit   Int?
-  usedCount    Int          @default(0)
-  isActive     Boolean      @default(true)
-  expiryDate   DateTime?
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-}

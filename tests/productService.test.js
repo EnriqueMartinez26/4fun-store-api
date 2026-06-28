@@ -66,15 +66,13 @@ describe('ProductService', () => {
       prisma.product.findUnique.mockResolvedValue({
         id: 'prod-123',
         type: 'DIGITAL',
-        status: 'DRAFT',
-        stock: 0
+        status: 'DRAFT'
       });
-      // El update final del servicio debe forzar el status a OUT_OF_STOCK si stock <= 0
+      // El update final del servicio debe forzar el status a OUT_OF_STOCK si no hay keys disponibles
       prisma.product.update.mockResolvedValue({
         id: 'prod-123',
         type: 'DIGITAL',
-        status: 'OUT_OF_STOCK',
-        stock: 0
+        status: 'OUT_OF_STOCK'
       });
 
       const result = await ProductService.updateProduct('prod-123', { active: true });

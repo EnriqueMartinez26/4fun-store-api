@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { sendMessage } = require('../controllers/contactController');
+const { contactValidation } = require('../middlewares/contactValidator');
 const rateLimit = require('express-rate-limit');
 
 /**
@@ -24,6 +25,6 @@ const contactLimiter = rateLimit({
 });
 
 /** @route POST /api/contact - Despacha notificación de contacto al soporte administrativo. */
-router.post('/', contactLimiter, sendMessage);
+router.post('/', contactLimiter, contactValidation, sendMessage);
 
 module.exports = router;

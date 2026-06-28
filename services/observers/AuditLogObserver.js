@@ -21,6 +21,7 @@
 
 const OrderObserver = require('./OrderObserver');
 const logger        = require('../../utils/logger');
+const { attachOrderTotal } = require('../../utils/orderTotals');
 
 class AuditLogObserver extends OrderObserver {
     /**
@@ -35,13 +36,14 @@ class AuditLogObserver extends OrderObserver {
      * @returns {Promise<void>}
      */
     async update(event, { order }) {
+        const normalizedOrder = attachOrderTotal(order);
         // Registro de Auditoría: Traza estructurada para análisis forense de pagos.
         logger.info(`[AuditLogObserver] Evento "${event}" recibido`, {
-            orderId:     order?.id,
-            userId:      order?.userId,
-            totalPrice:  order?.totalPrice,
-            isPaid:      order?.isPaid,
-            status:      order?.status,
+            orderId:     normalizedOrder?.id,
+            userId:      normalizedOrder?.userId,
+            totalPrice:  normalizedOrder?.totalPrice,
+            isPaid:      normalizedOrder?.isPaid,
+            status:      normalizedOrder?.status,
             timestamp:   new Date().toISOString()
         });
     }

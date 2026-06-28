@@ -96,7 +96,8 @@ describe('Order and Transaction Services', () => {
       prisma.digitalKey.count.mockResolvedValue(5);
       prisma.order.create.mockResolvedValue({
         id: 'order-123',
-        totalPrice: 10,
+        shippingPrice: 0,
+        orderItems: [{ unitPriceAtPurchase: 10, quantity: 1 }],
         status: 'PENDING'
       });
 
@@ -115,16 +116,16 @@ describe('Order and Transaction Services', () => {
       prisma.order.findUnique.mockResolvedValue({
         id: 'order-123',
         isPaid: false,
-        totalPrice: 10,
         userId: 'user-1',
-        orderItems: [{ productId: 'prod-1', quantity: 1, product: { type: 'DIGITAL', sellerId: 'seller-99' } }]
+        shippingPrice: 0,
+        orderItems: [{ productId: 'prod-1', quantity: 1, unitPriceAtPurchase: 10, product: { type: 'DIGITAL', sellerId: 'seller-99' } }]
       });
       prisma.order.update.mockResolvedValue({
         id: 'order-123',
         isPaid: true,
-        totalPrice: 10,
         userId: 'user-1',
-        orderItems: [{ productId: 'prod-1', quantity: 1, product: { type: 'DIGITAL', sellerId: 'seller-99' } }]
+        shippingPrice: 0,
+        orderItems: [{ productId: 'prod-1', quantity: 1, unitPriceAtPurchase: 10, product: { type: 'DIGITAL', sellerId: 'seller-99' } }]
       });
 
       await OrderService.updateOrderToPaid('order-123');
@@ -153,7 +154,11 @@ describe('Order and Transaction Services', () => {
         status: 'PENDING_APPROVAL',
         amount: 10,
         orderId: 'order-123',
-        order: { paidAt },
+        order: {
+          paidAt,
+          shippingPrice: 0,
+          orderItems: [{ unitPriceAtPurchase: 10, quantity: 1 }]
+        },
         seller: { name: 'Seller 1' }
       });
       prisma.orderItem.findMany.mockResolvedValue([{ unitPriceAtPurchase: 10, quantity: 1 }]);

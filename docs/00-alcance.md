@@ -21,14 +21,13 @@ El sistema está diseñado específicamente como un **e-commerce de videojuegos 
 3. **Operaciones de carrito y compras**:
    - Gestión de carrito de compras persistente.
    - Creación de órdenes de compra con estados logísticos asociados (`PENDING`, `PROCESSING`, `SHIPPED`, `DELIVERED`, `CANCELLED`).
-   - Consolidación del precio desde la base de datos y separación del estado financiero mediante `isPaid` y `Transaction`.
-   - Validación de cupones de descuento vigentes y no acumulables durante el checkout.
+   - Consolidación del total desde los datos normalizados del pedido y separación del estado financiero mediante `isPaid` y `Transaction`.
 
 4. **Entrega de claves digitales**:
    - Lógica de asignación atómica de licencias (`DigitalKey`) a las órdenes pagadas.
 
 5. **Panel de control administrativo (Dashboard)**:
-   - Panel de control para usuarios con rol `ADMIN` para gestionar stock, ver estadísticas del sistema y administrar usuarios.
+   - Panel de control para usuarios con rol `ADMIN` para gestionar disponibilidad de claves, ver estadísticas del sistema y administrar usuarios.
    - Panel secundario para vendedores con acceso a sus propios productos, ventas y transacciones.
 
 ### Fuera del Alcance

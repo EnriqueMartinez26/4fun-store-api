@@ -11,7 +11,7 @@ const ErrorResponse = require('../utils/errorResponse');
 const logger = require('../utils/logger');
 
 /**
- * Inserta un lote de claves digitales y actualiza el contador de stock del producto.
+ * Inserta un lote de claves digitales y recalcula la disponibilidad del producto.
  * 
  * @param {Object} req - Body esperando { productId, keys: [string] }.
  * @param {Object} res - Respuesta HTTP serializada.
@@ -63,25 +63,22 @@ exports.addKeys = async (req, res, next) => {
             skipDuplicates: true
         });
 
-        // RN (Sincronía de Caching): Fuerza la actualización del contador 'stock' en Product
-        // para mantener el Frontend consistente sin tener que hacer Joins masivos cada vez que un usuario mira el shop.
         const currentTotal = await prisma.digitalKey.count({
             where: { productId: productId, status: 'AVAILABLE' }
         });
         
-        const updateData = { stock: currentTotal };
-
-        // Autocorrección de Estado: Si el producto estaba marcado como agotado pero ahora tiene stock,
-        // lo devolvemos al circuito de venta activo automáticamente.
+        const updateData = {};
         if (product.status === 'OUT_OF_STOCK' && currentTotal > 0) {
             updateData.status = 'ACTIVE';
-            logger.info(`♻️ Producto ${product.id} reactivado automáticamente por carga de stock.`);
+            logger.info(`♻️ Producto ${product.id} reactivado automáticamente por disponibilidad de keys.`);
         }
-        
-        await prisma.product.update({
-            where: { id: productId },
-            data: updateData
-        });
+
+        if (Object.keys(updateData).length > 0) {
+            await prisma.product.update({
+                where: { id: productId },
+                data: updateData
+            });
+        }
 
         logger.info(`🔑 ${newKeysToInsert.length} keys agregadas para ${product.name}`);
 
@@ -127,16 +124,26 @@ exports.deleteKey = async (req, res, next) => {
         const productId = key.productId;
         await prisma.digitalKey.delete({ where: { id } });
 
-        // RN Sincronía: Recalibra el master data del stock total tras la evaporación del ítem.
+        // RN Sincronía: Recalibra la disponibilidad tras la eliminación del ítem.
         const product = await prisma.product.findUnique({ where: { id: productId } });
         if (product) {
             const count = await prisma.digitalKey.count({
                 where: { productId: productId, status: 'AVAILABLE' }
             });
-            await prisma.product.update({
-                where: { id: productId },
-                data: { stock: count }
-            });
+
+            const updateData = {};
+            if (count <= 0 && product.status === 'ACTIVE') {
+                updateData.status = 'OUT_OF_STOCK';
+            } else if (count > 0 && product.status === 'OUT_OF_STOCK') {
+                updateData.status = 'ACTIVE';
+            }
+
+            if (Object.keys(updateData).length > 0) {
+                await prisma.product.update({
+                    where: { id: productId },
+                    data: updateData
+                });
+            }
 
             return res.json({ success: true, message: 'Key eliminada', currentStock: count });
         }
