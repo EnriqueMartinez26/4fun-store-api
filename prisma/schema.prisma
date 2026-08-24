@@ -204,7 +204,7 @@ model Product {
   type             ProductType @default(DIGITAL)
   releaseDate      DateTime
   developer        String
-  imageUrl         String      @default("https://placehold.co/600x400?text=No+Image")
+  imageUrl         String      @default("https://res.cloudinary.com/dxlbwdqop/image/upload/4fun/fallback.png")
   trailerUrl       String?
   status           ProductStatus @default(DRAFT)
   specPreset       SpecPreset?

@@ -173,7 +173,7 @@ class ProductService extends BaseService {
             type: 'Digital',
             releaseDate: p.releaseDate,
             developer: p.developer,
-            imageId: p.imageUrl || 'https://placehold.co/600x400?text=Sin+Imagen',
+            imageId: p.imageUrl || 'https://res.cloudinary.com/dxlbwdqop/image/upload/4fun/fallback.png',
             trailerUrl: p.trailerUrl || '',
             // RN: El rating se deriva dinámicamente de p.reviews si está disponible
             rating: p.reviews?.length ? Number((p.reviews.reduce((acc, curr) => acc + curr.rating, 0) / p.reviews.length).toFixed(1)) : 0,
@@ -401,7 +401,7 @@ class ProductService extends BaseService {
                 type: tipo,
                 releaseDate: releaseDate ? new Date(releaseDate) : new Date(),
                 developer: normalizedDeveloper,
-                imageUrl: resolvedImageUrl || 'https://placehold.co/600x400?text=Sin+Imagen',
+                imageUrl: resolvedImageUrl || 'https://res.cloudinary.com/dxlbwdqop/image/upload/4fun/fallback.png',
                 trailerUrl: normalizedTrailerUrl || null,
                 status: 'DRAFT', // Por defecto DRAFT hasta validación de disponibilidad
                 specPreset: normalizedSpecPreset,
