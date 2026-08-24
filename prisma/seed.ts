@@ -25,10 +25,10 @@ const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
 type BuyerKey = 'buyerMain' | 'buyerTwo' | 'buyerThree';
 type SellerKey = 'sellerMain' | 'sellerTwo';
-type AdminKey = 'admin';
+type AdminKey = 'admin' | 'ownerAdmin';
 type UserKey = BuyerKey | SellerKey | AdminKey;
 
-type PlatformKey = 'pc' | 'steam' | 'ps5' | 'xbox' | 'switch';
+type PlatformKey = 'steam' | 'gog' | 'xbox' | 'switch';
 type GenreKey =
   | 'action'
   | 'adventure'
@@ -36,16 +36,39 @@ type GenreKey =
   | 'strategy'
   | 'horror'
   | 'racing'
-  | 'indie';
+  | 'indie'
+  | 'simulation';
 type ProductKey =
-  | 'chronoVanguard'
-  | 'neonHarbor'
-  | 'skylineTactics'
-  | 'titanCircuit2099'
-  | 'silentDepths'
-  | 'astralColony'
-  | 'pocketColony'
-  | 'ironHarborLegacy';
+  | 'eldenRing'
+  | 'civilizationVi'
+  | 'cyberpunk2077'
+  | 'residentEvil4'
+  | 'forzaHorizon5'
+  | 'stardewValley'
+  | 'hollowKnight'
+  | 'doomEternal'
+  | 'baldursGate3'
+  | 'theWitcher3'
+  | 'redDeadRedemption2'
+  | 'sekiro'
+  | 'darkSouls3'
+  | 'discoElysium'
+  | 'divinityOriginalSin2'
+  | 'hades'
+  | 'celeste'
+  | 'deadCells'
+  | 'slayTheSpire'
+  | 'outerWilds'
+  | 'subnautica'
+  | 'portal2'
+  | 'halfLifeAlyx'
+  | 'alanWake2'
+  | 'silentHill2'
+  | 'godOfWarRagnarok'
+  | 'oriWillOfTheWisps'
+  | 'forzaMotorsport'
+  | 'ageOfEmpiresIv'
+  | 'totalWarWarhammer3';
 type OrderKey = 'orderOne' | 'orderTwo' | 'orderThree' | 'orderFour' | 'orderFive';
 type RequirementStage = 'MINIMUM' | 'RECOMMENDED';
 
@@ -60,14 +83,12 @@ type PlatformSeed = {
   key: PlatformKey;
   slug: string;
   name: string;
-  imageText: string;
 };
 
 type GenreSeed = {
   key: GenreKey;
   slug: string;
   name: string;
-  imageText: string;
 };
 
 type UserSeed = {
@@ -75,9 +96,14 @@ type UserSeed = {
   name: string;
   email: string;
   role: Role;
-  avatarText: string;
   phone: string;
   address: string;
+  /**
+   * RN - Seguridad: variable de entorno de la que sale la contrasena de esta
+   * cuenta. Se usa para cuentas reales, cuyo secreto nunca debe versionarse.
+   * Sin este campo, la cuenta recibe la contrasena compartida de demostracion.
+   */
+  passwordEnvVar?: string;
   sellerProfile?: {
     storeName: string;
     storeDescription: string;
@@ -94,7 +120,6 @@ type ProductSeed = {
   price: string;
   releaseDate: Date;
   developer: string;
-  imageText: string;
   status: ProductStatus;
   specPreset: SpecPreset;
   discountPercent: number;
@@ -148,11 +173,17 @@ type ReviewSeed = {
   helpfulBy: BuyerKey[];
 };
 
-const makeImageUrl = (text: string) =>
-  `https://placehold.co/600x400/png?text=${encodeURIComponent(text)}`;
+// RN - Identidad Visual: portadas propias alojadas en Cloudinary, nombradas por la
+// clave del producto. Arte original generado para el catalogo; no reproduce material
+// de terceros.
+const makeCoverUrl = (key: ProductKey) =>
+  `${CDN}/covers/${key}.png`;
 
-const makeAvatarUrl = (text: string) =>
-  `https://placehold.co/128x128/png?text=${encodeURIComponent(text)}`;
+const CDN = 'https://res.cloudinary.com/dxlbwdqop/image/upload/4fun';
+
+const makePlatformUrl = (key: PlatformKey) => `${CDN}/platform-${key}.png`;
+const makeGenreUrl = (key: GenreKey) => `${CDN}/genre-${key}.png`;
+const makeAvatarUrl = (key: UserKey) => `${CDN}/avatar-${key}.png`;
 
 const money = (value: string | number) => new Prisma.Decimal(value);
 
@@ -273,21 +304,21 @@ const switchRequirements: RequirementTemplate = {
 };
 
 const platformSeeds: PlatformSeed[] = [
-  { key: 'pc', slug: 'pc', name: 'PC', imageText: 'PC' },
-  { key: 'steam', slug: 'steam', name: 'Steam', imageText: 'Steam' },
-  { key: 'ps5', slug: 'playstation-5', name: 'PlayStation 5', imageText: 'PS5' },
-  { key: 'xbox', slug: 'xbox-series-xs', name: 'Xbox Series X|S', imageText: 'Xbox' },
-  { key: 'switch', slug: 'nintendo-switch', name: 'Nintendo Switch', imageText: 'Switch' },
+  { key: 'steam', slug: 'steam', name: 'Steam' },
+  { key: 'gog', slug: 'gog-com', name: 'GOG.COM' },
+  { key: 'xbox', slug: 'xbox-series-xs', name: 'Xbox Series X|S' },
+  { key: 'switch', slug: 'nintendo-switch', name: 'Nintendo Switch' },
 ];
 
 const genreSeeds: GenreSeed[] = [
-  { key: 'action', slug: 'action', name: 'Action', imageText: 'Action' },
-  { key: 'adventure', slug: 'adventure', name: 'Adventure', imageText: 'Adventure' },
-  { key: 'rpg', slug: 'rpg', name: 'RPG', imageText: 'RPG' },
-  { key: 'strategy', slug: 'strategy', name: 'Strategy', imageText: 'Strategy' },
-  { key: 'horror', slug: 'horror', name: 'Horror', imageText: 'Horror' },
-  { key: 'racing', slug: 'racing', name: 'Racing', imageText: 'Racing' },
-  { key: 'indie', slug: 'indie', name: 'Indie', imageText: 'Indie' },
+  { key: 'action', slug: 'action', name: 'Action' },
+  { key: 'adventure', slug: 'adventure', name: 'Adventure' },
+  { key: 'rpg', slug: 'rpg', name: 'RPG' },
+  { key: 'strategy', slug: 'strategy', name: 'Strategy' },
+  { key: 'horror', slug: 'horror', name: 'Horror' },
+  { key: 'racing', slug: 'racing', name: 'Racing' },
+  { key: 'indie', slug: 'indie', name: 'Indie' },
+  { key: 'simulation', slug: 'simulation', name: 'Simulation' },
 ];
 
 const userSeeds: UserSeed[] = [
@@ -296,7 +327,6 @@ const userSeeds: UserSeed[] = [
     name: 'Lucía Fernández',
     email: 'buyer@4fun.test',
     role: Role.BUYER,
-    avatarText: 'LF',
     phone: '+54 11 5555-0101',
     address: 'Sarmiento 1450, C1041 CABA, Argentina',
   },
@@ -305,7 +335,6 @@ const userSeeds: UserSeed[] = [
     name: 'Tomás Acosta',
     email: 'buyer2@4fun.test',
     role: Role.BUYER,
-    avatarText: 'TA',
     phone: '+54 341 555-0202',
     address: 'Bv. Oroño 1122, Rosario, Santa Fe, Argentina',
   },
@@ -314,7 +343,6 @@ const userSeeds: UserSeed[] = [
     name: 'Camila Torres',
     email: 'buyer3@4fun.test',
     role: Role.BUYER,
-    avatarText: 'CT',
     phone: '+54 221 555-0303',
     address: 'Diagonal 74 2215, La Plata, Buenos Aires, Argentina',
   },
@@ -323,7 +351,6 @@ const userSeeds: UserSeed[] = [
     name: 'Marcos Ferreyra',
     email: 'seller@4fun.test',
     role: Role.SELLER,
-    avatarText: 'MF',
     phone: '+54 11 5555-0404',
     address: 'Av. Corrientes 2840, C1193 CABA, Argentina',
     sellerProfile: {
@@ -339,7 +366,6 @@ const userSeeds: UserSeed[] = [
     name: 'Paula Pereyra',
     email: 'seller2@4fun.test',
     role: Role.SELLER,
-    avatarText: 'PP',
     phone: '+54 221 555-0505',
     address: 'Calle 48 867, La Plata, Buenos Aires, Argentina',
     sellerProfile: {
@@ -355,64 +381,69 @@ const userSeeds: UserSeed[] = [
     name: 'Valentina Ruiz',
     email: 'admin@4fun.test',
     role: Role.ADMIN,
-    avatarText: 'VR',
     phone: '+54 11 5555-0606',
     address: 'Av. Belgrano 3200, C1093 CABA, Argentina',
+  },
+  {
+    key: 'ownerAdmin',
+    name: 'Enrique Leonel Martinez',
+    email: 'emartinez.03@hotmail.com',
+    role: Role.ADMIN,
+    phone: '+54 381 6094007',
+    address: 'San Miguel de Tucuman, Argentina',
+    passwordEnvVar: 'OWNER_ADMIN_PASSWORD',
   },
 ];
 
 const productSeeds: ProductSeed[] = [
   {
-    key: 'chronoVanguard',
-    name: 'Chrono Vanguard',
+    key: 'eldenRing',
+    name: 'Elden Ring',
     description:
-      'A tactical sci-fi RPG with squad combat, branching decisions and a long-form campaign.',
-    price: '59.99',
-    releaseDate: new Date('2025-03-14T00:00:00Z'),
-    developer: 'Northwave Interactive',
-    imageText: 'Chrono Vanguard',
+      'Mundo abierto de fantasia oscura con exploracion libre y combate exigente.',
+    price: '64999.00',
+    releaseDate: new Date('2022-02-25T00:00:00Z'),
+    developer: 'FromSoftware',
     status: ProductStatus.ACTIVE,
     specPreset: SpecPreset.HIGH,
     discountPercent: 0,
     discountEndDate: null,
     displayOrder: 1,
     sellerKey: 'sellerMain',
-    platformKey: 'pc',
+    platformKey: 'steam',
     genreKey: 'rpg',
     requirements: pcHighRequirements,
     keyPrefix: 'CVG',
     keyCount: 4,
   },
   {
-    key: 'skylineTactics',
-    name: 'Skyline Tactics',
+    key: 'civilizationVi',
+    name: 'Sid Meier’s Civilization VI',
     description:
-      'A compact strategy title focused on turn-based squads, urban cover and replayable missions.',
-    price: '24.99',
-    releaseDate: new Date('2024-11-22T00:00:00Z'),
-    developer: 'Northwave Interactive',
-    imageText: 'Skyline Tactics',
+      'Estrategia por turnos: fundar una civilizacion y llevarla de la antiguedad al futuro.',
+    price: '32999.00',
+    releaseDate: new Date('2016-10-21T00:00:00Z'),
+    developer: 'Firaxis Games',
     status: ProductStatus.ACTIVE,
     specPreset: SpecPreset.LOW,
     discountPercent: 0,
     discountEndDate: null,
     displayOrder: 2,
     sellerKey: 'sellerMain',
-    platformKey: 'pc',
+    platformKey: 'steam',
     genreKey: 'strategy',
     requirements: pcLowRequirements,
     keyPrefix: 'SKY',
     keyCount: 3,
   },
   {
-    key: 'neonHarbor',
-    name: 'Neon Harbor',
+    key: 'cyberpunk2077',
+    name: 'Cyberpunk 2077',
     description:
-      'A cyberpunk adventure with exploration, dialogue branches and a strong visual identity.',
-    price: '34.99',
-    releaseDate: new Date('2025-05-09T00:00:00Z'),
-    developer: 'Northwave Interactive',
-    imageText: 'Neon Harbor',
+      'Accion y rol en primera persona en una metropolis futurista de mercenarios.',
+    price: '42999.00',
+    releaseDate: new Date('2020-12-10T00:00:00Z'),
+    developer: 'CD Projekt Red',
     status: ProductStatus.ACTIVE,
     specPreset: SpecPreset.MID,
     discountPercent: 15,
@@ -426,35 +457,33 @@ const productSeeds: ProductSeed[] = [
     keyCount: 4,
   },
   {
-    key: 'silentDepths',
-    name: 'Silent Depths',
+    key: 'residentEvil4',
+    name: 'Resident Evil 4',
     description:
-      'A survival horror experience set inside a submerged research base with light resource management.',
-    price: '69.99',
-    releaseDate: new Date('2025-01-31T00:00:00Z'),
-    developer: 'Pixel Forge',
-    imageText: 'Silent Depths',
+      'Reimaginacion del clasico de terror y supervivencia con combate sobre el hombro.',
+    price: '53999.00',
+    releaseDate: new Date('2023-03-24T00:00:00Z'),
+    developer: 'Capcom',
     status: ProductStatus.OUT_OF_STOCK,
     specPreset: SpecPreset.HIGH,
     discountPercent: 0,
     discountEndDate: null,
     displayOrder: 4,
     sellerKey: 'sellerTwo',
-    platformKey: 'ps5',
+    platformKey: 'gog',
     genreKey: 'horror',
-    requirements: ps5Requirements,
+    requirements: pcHighRequirements,
     keyPrefix: 'SID',
     keyCount: 1,
   },
   {
-    key: 'titanCircuit2099',
-    name: 'Titan Circuit 2099',
+    key: 'forzaHorizon5',
+    name: 'Forza Horizon 5',
     description:
-      'An arcade racer with futuristic tracks, quick online events and deep vehicle tuning.',
-    price: '49.99',
-    releaseDate: new Date('2025-08-21T00:00:00Z'),
-    developer: 'Blue Meridian',
-    imageText: 'Titan Circuit 2099',
+      'Festival de carreras en mundo abierto ambientado en Mexico.',
+    price: '47999.00',
+    releaseDate: new Date('2021-11-09T00:00:00Z'),
+    developer: 'Playground Games',
     status: ProductStatus.ACTIVE,
     specPreset: SpecPreset.MID,
     discountPercent: 10,
@@ -468,14 +497,13 @@ const productSeeds: ProductSeed[] = [
     keyCount: 4,
   },
   {
-    key: 'astralColony',
-    name: 'Astral Colony',
+    key: 'stardewValley',
+    name: 'Stardew Valley',
     description:
-      'A cozy indie colony builder about surviving and growing a settlement on an asteroid.',
-    price: '29.99',
-    releaseDate: new Date('2025-12-12T00:00:00Z'),
-    developer: 'Moonstone Atelier',
-    imageText: 'Astral Colony',
+      'Simulador de granja y vida rural con cultivos, mineria y vinculos con el pueblo.',
+    price: '15999.00',
+    releaseDate: new Date('2016-02-26T00:00:00Z'),
+    developer: 'ConcernedApe',
     status: ProductStatus.ACTIVE,
     specPreset: SpecPreset.LOW,
     discountPercent: 0,
@@ -483,20 +511,19 @@ const productSeeds: ProductSeed[] = [
     displayOrder: 6,
     sellerKey: 'sellerTwo',
     platformKey: 'switch',
-    genreKey: 'indie',
+    genreKey: 'simulation',
     requirements: switchRequirements,
     keyPrefix: 'AST',
     keyCount: 3,
   },
   {
-    key: 'pocketColony',
-    name: 'Pocket Colony',
+    key: 'hollowKnight',
+    name: 'Hollow Knight',
     description:
-      'A small-scale management game planned for a later release, with a friendly art direction.',
-    price: '19.99',
-    releaseDate: new Date('2026-09-18T00:00:00Z'),
-    developer: 'Moonstone Atelier',
-    imageText: 'Pocket Colony',
+      'Metroidvania dibujado a mano en un reino subterraneo de insectos.',
+    price: '15999.00',
+    releaseDate: new Date('2017-02-24T00:00:00Z'),
+    developer: 'Team Cherry',
     status: ProductStatus.DRAFT,
     specPreset: SpecPreset.LOW,
     discountPercent: 0,
@@ -510,28 +537,466 @@ const productSeeds: ProductSeed[] = [
     keyCount: 0,
   },
   {
-    key: 'ironHarborLegacy',
-    name: 'Iron Harbor Legacy',
+    key: 'doomEternal',
+    name: 'DOOM Eternal',
     description:
-      'A narrative action game kept in suspended state after moderation and catalog review.',
-    price: '39.99',
-    releaseDate: new Date('2024-03-15T00:00:00Z'),
-    developer: 'Blue Meridian',
-    imageText: 'Iron Harbor Legacy',
+      'Shooter frenetico de ritmo alto contra hordas demoniacas.',
+    price: '42999.00',
+    releaseDate: new Date('2020-03-20T00:00:00Z'),
+    developer: 'id Software',
     status: ProductStatus.SUSPENDED,
     specPreset: SpecPreset.HIGH,
     discountPercent: 0,
     discountEndDate: null,
     displayOrder: 8,
     sellerKey: 'sellerTwo',
-    platformKey: 'pc',
+    platformKey: 'steam',
     genreKey: 'action',
     requirements: pcHighRequirements,
     keyPrefix: 'IRN',
     keyCount: 0,
   },
+  {
+    key: 'baldursGate3',
+    name: 'Baldur’s Gate 3',
+    description:
+      'Rol por turnos con reglas de mesa, decisiones ramificadas y companeros propios.',
+    price: '64999.00',
+    releaseDate: new Date('2023-08-03T00:00:00Z'),
+    developer: 'Larian Studios',
+    status: ProductStatus.ACTIVE,
+    specPreset: SpecPreset.HIGH,
+    discountPercent: 0,
+    discountEndDate: null,
+    displayOrder: 9,
+    sellerKey: 'sellerMain',
+    platformKey: 'steam',
+    genreKey: 'rpg',
+    requirements: pcHighRequirements,
+    keyPrefix: 'BG3',
+    keyCount: 4,
+  },
+  {
+    key: 'theWitcher3',
+    name: 'The Witcher 3: Wild Hunt',
+    description:
+      'Rol de mundo abierto con contratos de caza de monstruos y una historia extensa.',
+    price: '32999.00',
+    releaseDate: new Date('2015-05-19T00:00:00Z'),
+    developer: 'CD Projekt Red',
+    status: ProductStatus.ACTIVE,
+    specPreset: SpecPreset.MID,
+    discountPercent: 20,
+    discountEndDate: daysFromNow(21),
+    displayOrder: 10,
+    sellerKey: 'sellerMain',
+    platformKey: 'steam',
+    genreKey: 'rpg',
+    requirements: pcMidRequirements,
+    keyPrefix: 'TW3',
+    keyCount: 4,
+  },
+  {
+    key: 'redDeadRedemption2',
+    name: 'Red Dead Redemption 2',
+    description:
+      'Aventura de mundo abierto en el ocaso del lejano oeste estadounidense.',
+    price: '53999.00',
+    releaseDate: new Date('2018-10-26T00:00:00Z'),
+    developer: 'Rockstar Games',
+    status: ProductStatus.ACTIVE,
+    specPreset: SpecPreset.HIGH,
+    discountPercent: 0,
+    discountEndDate: null,
+    displayOrder: 11,
+    sellerKey: 'sellerMain',
+    platformKey: 'steam',
+    genreKey: 'adventure',
+    requirements: pcHighRequirements,
+    keyPrefix: 'RDR',
+    keyCount: 3,
+  },
+  {
+    key: 'sekiro',
+    name: 'Sekiro: Shadows Die Twice',
+    description:
+      'Accion en el Japon del siglo XVI centrada en el duelo y la postura.',
+    price: '53999.00',
+    releaseDate: new Date('2019-03-22T00:00:00Z'),
+    developer: 'FromSoftware',
+    status: ProductStatus.ACTIVE,
+    specPreset: SpecPreset.HIGH,
+    discountPercent: 0,
+    discountEndDate: null,
+    displayOrder: 12,
+    sellerKey: 'sellerTwo',
+    platformKey: 'steam',
+    genreKey: 'action',
+    requirements: pcHighRequirements,
+    keyPrefix: 'SEK',
+    keyCount: 3,
+  },
+  {
+    key: 'darkSouls3',
+    name: 'Dark Souls III',
+    description:
+      'Rol de accion metodico en un mundo en decadencia interconectado.',
+    price: '42999.00',
+    releaseDate: new Date('2016-04-12T00:00:00Z'),
+    developer: 'FromSoftware',
+    status: ProductStatus.ACTIVE,
+    specPreset: SpecPreset.MID,
+    discountPercent: 15,
+    discountEndDate: daysFromNow(21),
+    displayOrder: 13,
+    sellerKey: 'sellerTwo',
+    platformKey: 'steam',
+    genreKey: 'rpg',
+    requirements: pcMidRequirements,
+    keyPrefix: 'DS3',
+    keyCount: 4,
+  },
+  {
+    key: 'discoElysium',
+    name: 'Disco Elysium',
+    description:
+      'Rol de investigacion sin combate, resuelto enteramente con dialogo y pensamiento.',
+    price: '26999.00',
+    releaseDate: new Date('2019-10-15T00:00:00Z'),
+    developer: 'ZA/UM',
+    status: ProductStatus.ACTIVE,
+    specPreset: SpecPreset.LOW,
+    discountPercent: 0,
+    discountEndDate: null,
+    displayOrder: 14,
+    sellerKey: 'sellerMain',
+    platformKey: 'steam',
+    genreKey: 'rpg',
+    requirements: pcLowRequirements,
+    keyPrefix: 'DSE',
+    keyCount: 4,
+  },
+  {
+    key: 'divinityOriginalSin2',
+    name: 'Divinity: Original Sin 2',
+    description:
+      'Rol tactico por turnos con interaccion elemental y cooperativo completo.',
+    price: '47999.00',
+    releaseDate: new Date('2017-09-14T00:00:00Z'),
+    developer: 'Larian Studios',
+    status: ProductStatus.ACTIVE,
+    specPreset: SpecPreset.MID,
+    discountPercent: 0,
+    discountEndDate: null,
+    displayOrder: 15,
+    sellerKey: 'sellerMain',
+    platformKey: 'steam',
+    genreKey: 'rpg',
+    requirements: pcMidRequirements,
+    keyPrefix: 'DOS',
+    keyCount: 3,
+  },
+  {
+    key: 'hades',
+    name: 'Hades',
+    description:
+      'Roguelite de accion isometrica donde cada intento avanza el relato.',
+    price: '26999.00',
+    releaseDate: new Date('2020-09-17T00:00:00Z'),
+    developer: 'Supergiant Games',
+    status: ProductStatus.ACTIVE,
+    specPreset: SpecPreset.LOW,
+    discountPercent: 0,
+    discountEndDate: null,
+    displayOrder: 16,
+    sellerKey: 'sellerTwo',
+    platformKey: 'steam',
+    genreKey: 'action',
+    requirements: pcLowRequirements,
+    keyPrefix: 'HDS',
+    keyCount: 5,
+  },
+  {
+    key: 'celeste',
+    name: 'Celeste',
+    description:
+      'Plataformas de precision sobre una montana, con una historia intima detras.',
+    price: '21999.00',
+    releaseDate: new Date('2018-01-25T00:00:00Z'),
+    developer: 'Maddy Makes Games',
+    status: ProductStatus.ACTIVE,
+    specPreset: SpecPreset.LOW,
+    discountPercent: 0,
+    discountEndDate: null,
+    displayOrder: 17,
+    sellerKey: 'sellerMain',
+    platformKey: 'switch',
+    genreKey: 'indie',
+    requirements: switchRequirements,
+    keyPrefix: 'CLS',
+    keyCount: 5,
+  },
+  {
+    key: 'deadCells',
+    name: 'Dead Cells',
+    description:
+      'Roguevania de combate rapido y progresion permanente entre corridas.',
+    price: '26999.00',
+    releaseDate: new Date('2018-08-07T00:00:00Z'),
+    developer: 'Motion Twin',
+    status: ProductStatus.ACTIVE,
+    specPreset: SpecPreset.LOW,
+    discountPercent: 10,
+    discountEndDate: daysFromNow(21),
+    displayOrder: 18,
+    sellerKey: 'sellerTwo',
+    platformKey: 'switch',
+    genreKey: 'action',
+    requirements: switchRequirements,
+    keyPrefix: 'DCL',
+    keyCount: 4,
+  },
+  {
+    key: 'slayTheSpire',
+    name: 'Slay the Spire',
+    description:
+      'Constructor de mazos por turnos con ascensiones y partidas irrepetibles.',
+    price: '26999.00',
+    releaseDate: new Date('2019-01-23T00:00:00Z'),
+    developer: 'Mega Crit Games',
+    status: ProductStatus.ACTIVE,
+    specPreset: SpecPreset.LOW,
+    discountPercent: 0,
+    discountEndDate: null,
+    displayOrder: 19,
+    sellerKey: 'sellerMain',
+    platformKey: 'switch',
+    genreKey: 'strategy',
+    requirements: switchRequirements,
+    keyPrefix: 'STS',
+    keyCount: 5,
+  },
+  {
+    key: 'outerWilds',
+    name: 'Outer Wilds',
+    description:
+      'Exploracion espacial en un sistema solar atrapado en un bucle de 22 minutos.',
+    price: '26999.00',
+    releaseDate: new Date('2019-05-28T00:00:00Z'),
+    developer: 'Mobius Digital',
+    status: ProductStatus.ACTIVE,
+    specPreset: SpecPreset.MID,
+    discountPercent: 0,
+    discountEndDate: null,
+    displayOrder: 20,
+    sellerKey: 'sellerMain',
+    platformKey: 'steam',
+    genreKey: 'adventure',
+    requirements: pcMidRequirements,
+    keyPrefix: 'OWL',
+    keyCount: 3,
+  },
+  {
+    key: 'subnautica',
+    name: 'Subnautica',
+    description:
+      'Supervivencia y exploracion submarina en un planeta oceanico desconocido.',
+    price: '32999.00',
+    releaseDate: new Date('2018-01-23T00:00:00Z'),
+    developer: 'Unknown Worlds',
+    status: ProductStatus.ACTIVE,
+    specPreset: SpecPreset.MID,
+    discountPercent: 0,
+    discountEndDate: null,
+    displayOrder: 21,
+    sellerKey: 'sellerTwo',
+    platformKey: 'steam',
+    genreKey: 'simulation',
+    requirements: pcMidRequirements,
+    keyPrefix: 'SBN',
+    keyCount: 4,
+  },
+  {
+    key: 'portal2',
+    name: 'Portal 2',
+    description:
+      'Rompecabezas en primera persona con portales, humor seco y modo cooperativo.',
+    price: '10999.00',
+    releaseDate: new Date('2011-04-19T00:00:00Z'),
+    developer: 'Valve',
+    status: ProductStatus.ACTIVE,
+    specPreset: SpecPreset.LOW,
+    discountPercent: 0,
+    discountEndDate: null,
+    displayOrder: 22,
+    sellerKey: 'sellerMain',
+    platformKey: 'steam',
+    genreKey: 'adventure',
+    requirements: pcLowRequirements,
+    keyPrefix: 'PRT',
+    keyCount: 5,
+  },
+  {
+    key: 'halfLifeAlyx',
+    name: 'Half-Life: Alyx',
+    description:
+      'Accion en realidad virtual ambientada entre los dos primeros Half-Life.',
+    price: '53999.00',
+    releaseDate: new Date('2020-03-23T00:00:00Z'),
+    developer: 'Valve',
+    status: ProductStatus.ACTIVE,
+    specPreset: SpecPreset.HIGH,
+    discountPercent: 0,
+    discountEndDate: null,
+    displayOrder: 23,
+    sellerKey: 'sellerTwo',
+    platformKey: 'steam',
+    genreKey: 'action',
+    requirements: pcHighRequirements,
+    keyPrefix: 'HLA',
+    keyCount: 3,
+  },
+  {
+    key: 'alanWake2',
+    name: 'Alan Wake 2',
+    description:
+      'Terror narrativo de dos protagonistas entre un pueblo real y un mundo escrito.',
+    price: '53999.00',
+    releaseDate: new Date('2023-10-27T00:00:00Z'),
+    developer: 'Remedy Entertainment',
+    status: ProductStatus.ACTIVE,
+    specPreset: SpecPreset.HIGH,
+    discountPercent: 0,
+    discountEndDate: null,
+    displayOrder: 24,
+    sellerKey: 'sellerTwo',
+    platformKey: 'steam',
+    genreKey: 'horror',
+    requirements: pcHighRequirements,
+    keyPrefix: 'AW2',
+    keyCount: 3,
+  },
+  {
+    key: 'silentHill2',
+    name: 'Silent Hill 2',
+    description:
+      'Terror psicologico en un pueblo cubierto de niebla que responde a la culpa.',
+    price: '74999.00',
+    releaseDate: new Date('2024-10-08T00:00:00Z'),
+    developer: 'Bloober Team',
+    status: ProductStatus.ACTIVE,
+    specPreset: SpecPreset.HIGH,
+    discountPercent: 25,
+    discountEndDate: daysFromNow(21),
+    displayOrder: 25,
+    sellerKey: 'sellerTwo',
+    platformKey: 'gog',
+    genreKey: 'horror',
+    requirements: pcHighRequirements,
+    keyPrefix: 'SH2',
+    keyCount: 3,
+  },
+  {
+    key: 'godOfWarRagnarok',
+    name: 'God of War Ragnarok',
+    description:
+      'Accion y aventura por los nueve reinos nordicos, padre e hijo.',
+    price: '64999.00',
+    releaseDate: new Date('2022-11-09T00:00:00Z'),
+    developer: 'Santa Monica Studio',
+    status: ProductStatus.ACTIVE,
+    specPreset: SpecPreset.HIGH,
+    discountPercent: 0,
+    discountEndDate: null,
+    displayOrder: 26,
+    sellerKey: 'sellerMain',
+    platformKey: 'gog',
+    genreKey: 'action',
+    requirements: pcHighRequirements,
+    keyPrefix: 'GWR',
+    keyCount: 4,
+  },
+  {
+    key: 'oriWillOfTheWisps',
+    name: 'Ori and the Will of the Wisps',
+    description:
+      'Plataformas pintado a mano con combate fluido y banda sonora orquestal.',
+    price: '32999.00',
+    releaseDate: new Date('2020-03-11T00:00:00Z'),
+    developer: 'Moon Studios',
+    status: ProductStatus.ACTIVE,
+    specPreset: SpecPreset.MID,
+    discountPercent: 0,
+    discountEndDate: null,
+    displayOrder: 27,
+    sellerKey: 'sellerMain',
+    platformKey: 'xbox',
+    genreKey: 'adventure',
+    requirements: xboxRequirements,
+    keyPrefix: 'ORI',
+    keyCount: 4,
+  },
+  {
+    key: 'forzaMotorsport',
+    name: 'Forza Motorsport',
+    description:
+      'Simulador de circuitos con desgaste de neumaticos y clima dinamico.',
+    price: '58999.00',
+    releaseDate: new Date('2023-10-10T00:00:00Z'),
+    developer: 'Turn 10 Studios',
+    status: ProductStatus.ACTIVE,
+    specPreset: SpecPreset.HIGH,
+    discountPercent: 0,
+    discountEndDate: null,
+    displayOrder: 28,
+    sellerKey: 'sellerTwo',
+    platformKey: 'xbox',
+    genreKey: 'racing',
+    requirements: xboxRequirements,
+    keyPrefix: 'FZM',
+    keyCount: 3,
+  },
+  {
+    key: 'ageOfEmpiresIv',
+    name: 'Age of Empires IV',
+    description:
+      'Estrategia en tiempo real con ocho civilizaciones y campanas historicas.',
+    price: '42999.00',
+    releaseDate: new Date('2021-10-28T00:00:00Z'),
+    developer: 'Relic Entertainment',
+    status: ProductStatus.ACTIVE,
+    specPreset: SpecPreset.MID,
+    discountPercent: 0,
+    discountEndDate: null,
+    displayOrder: 29,
+    sellerKey: 'sellerMain',
+    platformKey: 'steam',
+    genreKey: 'strategy',
+    requirements: pcMidRequirements,
+    keyPrefix: 'AE4',
+    keyCount: 3,
+  },
+  {
+    key: 'totalWarWarhammer3',
+    name: 'Total War: WARHAMMER III',
+    description:
+      'Estrategia por turnos y batallas masivas en tiempo real en un mundo de fantasia.',
+    price: '53999.00',
+    releaseDate: new Date('2022-02-17T00:00:00Z'),
+    developer: 'Creative Assembly',
+    status: ProductStatus.ACTIVE,
+    specPreset: SpecPreset.HIGH,
+    discountPercent: 0,
+    discountEndDate: null,
+    displayOrder: 30,
+    sellerKey: 'sellerTwo',
+    platformKey: 'steam',
+    genreKey: 'strategy',
+    requirements: pcHighRequirements,
+    keyPrefix: 'TWW',
+    keyCount: 3,
+  },
 ];
-
 const productSeedByKey = Object.fromEntries(productSeeds.map((product) => [product.key, product])) as Record<
   ProductKey,
   ProductSeed
@@ -554,8 +1019,8 @@ const orderSeeds: OrderSeed[] = [
     paidAt: daysAgo(20),
     deliveredAt: daysAgo(20),
     items: [
-      { productKey: 'chronoVanguard', quantity: 1 },
-      { productKey: 'skylineTactics', quantity: 1 },
+      { productKey: 'eldenRing', quantity: 1 },
+      { productKey: 'civilizationVi', quantity: 1 },
     ],
     payment: {
       mpPaymentId: 'pay_20260607_0001',
@@ -580,7 +1045,7 @@ const orderSeeds: OrderSeed[] = [
     createdAt: daysAgo(4),
     paidAt: daysAgo(4),
     deliveredAt: daysAgo(4),
-    items: [{ productKey: 'chronoVanguard', quantity: 1 }],
+    items: [{ productKey: 'eldenRing', quantity: 1 }],
     payment: {
       mpPaymentId: 'pay_20260623_0002',
       mpStatus: 'approved',
@@ -602,7 +1067,7 @@ const orderSeeds: OrderSeed[] = [
     createdAt: daysAgo(16),
     paidAt: daysAgo(16),
     deliveredAt: daysAgo(16),
-    items: [{ productKey: 'silentDepths', quantity: 1 }],
+    items: [{ productKey: 'residentEvil4', quantity: 1 }],
     payment: {
       mpPaymentId: 'pay_20260611_0003',
       mpStatus: 'approved',
@@ -626,7 +1091,7 @@ const orderSeeds: OrderSeed[] = [
     createdAt: daysAgo(1),
     paidAt: null,
     deliveredAt: null,
-    items: [{ productKey: 'astralColony', quantity: 1 }],
+    items: [{ productKey: 'stardewValley', quantity: 1 }],
   },
   {
     key: 'orderFive',
@@ -639,13 +1104,13 @@ const orderSeeds: OrderSeed[] = [
     createdAt: daysAgo(2),
     paidAt: null,
     deliveredAt: null,
-    items: [{ productKey: 'titanCircuit2099', quantity: 1 }],
+    items: [{ productKey: 'forzaHorizon5', quantity: 1 }],
   },
 ];
 
 const reviewSeeds: ReviewSeed[] = [
   {
-    productKey: 'chronoVanguard',
+    productKey: 'eldenRing',
     userKey: 'buyerMain',
     rating: 5,
     title: 'Táctico, exigente y muy sólido',
@@ -654,7 +1119,7 @@ const reviewSeeds: ReviewSeed[] = [
     helpfulBy: ['buyerTwo', 'buyerThree'],
   },
   {
-    productKey: 'skylineTactics',
+    productKey: 'civilizationVi',
     userKey: 'buyerMain',
     rating: 4,
     title: 'Ideal para partidas cortas',
@@ -663,7 +1128,7 @@ const reviewSeeds: ReviewSeed[] = [
     helpfulBy: ['buyerTwo'],
   },
   {
-    productKey: 'chronoVanguard',
+    productKey: 'eldenRing',
     userKey: 'buyerTwo',
     rating: 4,
     title: 'Buen ritmo y mucha identidad',
@@ -672,7 +1137,7 @@ const reviewSeeds: ReviewSeed[] = [
     helpfulBy: ['buyerMain', 'buyerThree'],
   },
   {
-    productKey: 'silentDepths',
+    productKey: 'residentEvil4',
     userKey: 'buyerThree',
     rating: 5,
     title: 'Horror atmosférico de verdad',
@@ -684,6 +1149,21 @@ const reviewSeeds: ReviewSeed[] = [
 
 async function main() {
   const passwordHash = await bcrypt.hash('password123', 10);
+
+  // RN - Seguridad: las cuentas reales toman su secreto del entorno. Si falta,
+  // el seed se detiene en vez de crear un administrador con una clave debil.
+  const passwordHashByUser = new Map<UserKey, string>();
+  for (const user of userSeeds) {
+    if (!user.passwordEnvVar) continue;
+    const secret = process.env[user.passwordEnvVar];
+    if (!secret || secret.length < 12) {
+      throw new Error(
+        `${user.passwordEnvVar} es obligatoria y debe tener al menos 12 caracteres ` +
+          `para crear la cuenta ${user.email}.`,
+      );
+    }
+    passwordHashByUser.set(user.key, await bcrypt.hash(secret, 10));
+  }
 
   await prisma.$transaction(
     async (tx) => {
@@ -719,7 +1199,7 @@ async function main() {
           slug: platform.slug,
           name: platform.name,
           isActive: true,
-          imageUrl: makeImageUrl(platform.imageText),
+          imageUrl: makePlatformUrl(platform.key),
         },
       });
       platformIds[platform.key] = created.id;
@@ -732,7 +1212,7 @@ async function main() {
           slug: genre.slug,
           name: genre.name,
           isActive: true,
-          imageUrl: makeImageUrl(genre.imageText),
+          imageUrl: makeGenreUrl(genre.key),
         },
       });
       genreIds[genre.key] = created.id;
@@ -744,8 +1224,8 @@ async function main() {
         data: {
           name: user.name,
           email: user.email,
-          password: passwordHash,
-          avatar: makeAvatarUrl(user.avatarText),
+          password: passwordHashByUser.get(user.key) ?? passwordHash,
+          avatar: makeAvatarUrl(user.key),
           phone: user.phone,
           address: user.address,
           role: user.role,
@@ -780,7 +1260,7 @@ async function main() {
           type: ProductType.DIGITAL,
           releaseDate: product.releaseDate,
           developer: product.developer,
-          imageUrl: makeImageUrl(product.imageText),
+          imageUrl: makeCoverUrl(product.key),
           status: product.status,
           specPreset: product.specPreset,
           discountPercent: product.discountPercent,
@@ -825,19 +1305,19 @@ async function main() {
 
     await tx.cartItem.createMany({
       data: [
-        { cartId: cartIds.buyerMain, productId: productIds.titanCircuit2099, quantity: 1 },
-        { cartId: cartIds.buyerTwo, productId: productIds.pocketColony, quantity: 1 },
-        { cartId: cartIds.buyerThree, productId: productIds.astralColony, quantity: 1 },
+        { cartId: cartIds.buyerMain, productId: productIds.forzaHorizon5, quantity: 1 },
+        { cartId: cartIds.buyerTwo, productId: productIds.hollowKnight, quantity: 1 },
+        { cartId: cartIds.buyerThree, productId: productIds.stardewValley, quantity: 1 },
       ],
     });
 
     await tx.wishlistItem.createMany({
       data: [
-        { wishlistId: wishlistIds.buyerMain, productId: productIds.pocketColony, addedAt: daysAgo(4) },
-        { wishlistId: wishlistIds.buyerMain, productId: productIds.astralColony, addedAt: daysAgo(4) },
-        { wishlistId: wishlistIds.buyerTwo, productId: productIds.titanCircuit2099, addedAt: daysAgo(6) },
-        { wishlistId: wishlistIds.buyerTwo, productId: productIds.neonHarbor, addedAt: daysAgo(6) },
-        { wishlistId: wishlistIds.buyerThree, productId: productIds.pocketColony, addedAt: daysAgo(3) },
+        { wishlistId: wishlistIds.buyerMain, productId: productIds.hollowKnight, addedAt: daysAgo(4) },
+        { wishlistId: wishlistIds.buyerMain, productId: productIds.stardewValley, addedAt: daysAgo(4) },
+        { wishlistId: wishlistIds.buyerTwo, productId: productIds.forzaHorizon5, addedAt: daysAgo(6) },
+        { wishlistId: wishlistIds.buyerTwo, productId: productIds.cyberpunk2077, addedAt: daysAgo(6) },
+        { wishlistId: wishlistIds.buyerThree, productId: productIds.hollowKnight, addedAt: daysAgo(3) },
       ],
     });
 
@@ -907,45 +1387,17 @@ async function main() {
       }
     }
 
+    // RN - Mantenibilidad: las claves se derivan de productSeeds, de modo que
+    // todo producto nuevo recibe su lote sin tocar esta sección.
     await tx.digitalKey.createMany({
-      data: [
-        ...Array.from({ length: productSeedByKey.chronoVanguard.keyCount }, (_, index) => ({
-          productId: productIds.chronoVanguard,
-          key: makeKey(productSeedByKey.chronoVanguard.keyPrefix, index + 1),
+      data: productSeeds.flatMap((product) =>
+        Array.from({ length: product.keyCount }, (_, index) => ({
+          productId: productIds[product.key],
+          key: makeKey(product.keyPrefix, index + 1),
           status: KeyStatus.AVAILABLE,
           isActive: true,
         })),
-        ...Array.from({ length: productSeedByKey.skylineTactics.keyCount }, (_, index) => ({
-          productId: productIds.skylineTactics,
-          key: makeKey(productSeedByKey.skylineTactics.keyPrefix, index + 1),
-          status: KeyStatus.AVAILABLE,
-          isActive: true,
-        })),
-        ...Array.from({ length: productSeedByKey.neonHarbor.keyCount }, (_, index) => ({
-          productId: productIds.neonHarbor,
-          key: makeKey(productSeedByKey.neonHarbor.keyPrefix, index + 1),
-          status: KeyStatus.AVAILABLE,
-          isActive: true,
-        })),
-        ...Array.from({ length: productSeedByKey.silentDepths.keyCount }, (_, index) => ({
-          productId: productIds.silentDepths,
-          key: makeKey(productSeedByKey.silentDepths.keyPrefix, index + 1),
-          status: KeyStatus.AVAILABLE,
-          isActive: true,
-        })),
-        ...Array.from({ length: productSeedByKey.titanCircuit2099.keyCount }, (_, index) => ({
-          productId: productIds.titanCircuit2099,
-          key: makeKey(productSeedByKey.titanCircuit2099.keyPrefix, index + 1),
-          status: KeyStatus.AVAILABLE,
-          isActive: true,
-        })),
-        ...Array.from({ length: productSeedByKey.astralColony.keyCount }, (_, index) => ({
-          productId: productIds.astralColony,
-          key: makeKey(productSeedByKey.astralColony.keyPrefix, index + 1),
-          status: KeyStatus.AVAILABLE,
-          isActive: true,
-        })),
-      ],
+      ),
     });
 
     await tx.digitalKey.updateMany({
@@ -1053,7 +1505,10 @@ async function main() {
   console.log('- seller2@4fun.test / password123');
   console.log('- admin@4fun.test / password123');
   console.log(
-    '[Resumen] users=6, platforms=5, genres=7, products=8, orders=5, reviews=4, keys=19',
+    `[Resumen] users=${userSeeds.length}, platforms=${platformSeeds.length}, ` +
+      `genres=${genreSeeds.length}, products=${productSeeds.length}, ` +
+      `orders=${orderSeeds.length}, reviews=${reviewSeeds.length}, ` +
+      `keys=${productSeeds.reduce((sum, p) => sum + p.keyCount, 0)}`,
   );
 }
 
