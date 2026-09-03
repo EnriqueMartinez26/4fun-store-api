@@ -54,6 +54,14 @@ Este backend forma parte de una tesis de Tecnicatura en Programación. Su objeti
 
 El sistema se enfoca exclusivamente en videojuegos digitales. La entrega del producto se modela mediante claves digitales asociadas a órdenes pagadas.
 
+## Decisiones técnicas
+
+El modelo inicial tenía un problema real: `Product` guardaba el stock como campo manual, y el total de la orden se guardaba aparte de sus `OrderItem`. Ninguno de los dos dependía de la fuente real — el stock no reflejaba las `DigitalKey` disponibles, el total no reflejaba los ítems de la orden.
+
+Se normalizó el esquema a 3FN. Ahora el stock se deriva de las `DigitalKey` disponibles y el total se calcula desde `OrderItem` + `shippingPrice`, ambos en tiempo real. Se sacó también el subsistema de cupones completo: sumaba complejidad y no aportaba al objetivo académico de la tesis.
+
+Los flujos críticos (auth, órdenes, transacciones, productos) están cubiertos por tests automatizados con Jest: 20 tests pasando, 44,6% de cobertura de statements concentrada en esos servicios.
+
 ## Despliegue académico
 
 API publicada: [https://4fun-store-api.vercel.app](https://4fun-store-api.vercel.app)
@@ -110,6 +118,16 @@ Request
 | `services`    | Reglas de negocio.                                        |
 | `prisma`      | Modelo relacional y acceso a datos.                       |
 | `utils`       | Logger, errores y utilidades compartidas.                 |
+
+```mermaid
+flowchart LR
+    Client[Cliente / Frontend] --> Route
+    Route --> Middleware
+    Middleware --> Controller
+    Controller --> Service
+    Service --> Prisma[(Prisma ORM)]
+    Prisma --> DB[(PostgreSQL)]
+```
 
 ## Tecnologías
 
